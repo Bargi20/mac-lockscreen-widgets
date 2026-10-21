@@ -6,8 +6,11 @@ struct LockScreenView: View {
     enum Mode { case lock, preview }
     let mode: Mode
     var onClose: () -> Void = {}
+    /// `--lock-preview` draws the wallpaper behind the widgets, as the lock screen would.
+    var simulated = false
 
     @EnvironmentObject var store: ConfigStore
+    @EnvironmentObject private var capture: WallpaperCapture
 
     var body: some View {
         GeometryReader { geo in
@@ -16,6 +19,9 @@ struct LockScreenView: View {
                     PreviewBackdrop()
                     StudioCanvas(screen: geo.size, onClose: onClose)
                 } else {
+                    if simulated, let image = capture.image {
+                        Image(nsImage: image).resizable().frame(width: geo.size.width, height: geo.size.height)
+                    }
                     let m = Metrics(s: store.config.scale)
                     ForEach(store.config.items) { item in
                         let size = m.size(item.size)

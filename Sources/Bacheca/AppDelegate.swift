@@ -104,7 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             reason: "Showing widgets on the lock screen")
         guard let screen = NSScreen.screens.first else { return }
         let window = OverlayWindow(screen: screen, interactive: false)
-        window.contentView = NSHostingView(rootView: env.inject(LockScreenView(mode: .lock)))
+        window.contentView = NSHostingView(rootView: env.inject(LockScreenView(mode: .lock, simulated: simulated)))
         // `--sky` also lifts the simulated layout into the SkyLight space, to test glass there.
         if !simulated || CommandLine.arguments.contains("--sky") { SkyLight.shared?.adopt(window) }
         window.orderFrontRegardless()

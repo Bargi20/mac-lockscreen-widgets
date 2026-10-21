@@ -132,25 +132,35 @@ struct LockScreenPanel: ViewModifier {
         content
             .background { fill }
             .clipShape(shape)
+            // Glass reads from its edges: a bright rim catching light at the top left,
+            // a thinner one at the bottom right, and a soft dark line just inside.
             .overlay(
                 shape.strokeBorder(
-                    LinearGradient(colors: [.white.opacity(0.45), .white.opacity(0.06), .white.opacity(0.2)],
+                    LinearGradient(colors: [.white.opacity(0.7), .white.opacity(0.08), .white.opacity(0.06), .white.opacity(0.35)],
                                    startPoint: .topLeading, endPoint: .bottomTrailing),
-                    lineWidth: 1))
-            .shadow(color: .black.opacity(0.18), radius: 12, y: 5)
+                    lineWidth: 1.5))
+            .overlay(
+                shape.inset(by: 1.5)
+                    .stroke(.black.opacity(0.12), lineWidth: 1)
+                    .blur(radius: 1.5)
+                    .clipShape(shape))
+            .shadow(color: .black.opacity(0.22), radius: 14, y: 6)
     }
 
-    /// Without blur the background stays sharp, so the panel needs enough body to keep text legible.
+    /// Clear glass barely tints what is behind it, so the moving lock screen wallpaper shows
+    /// through; frosted styles can't blur here, so they get more body to keep text legible.
     @ViewBuilder
     private var fill: some View {
         ZStack {
             switch style {
-            case .clearGlass: Color.black.opacity(0.32)
-            case .tinted: accent.opacity(0.5); Color.black.opacity(0.15)
-            default: Color.black.opacity(0.48)
+            case .clearGlass: Color.black.opacity(0.1)
+            case .tinted: accent.opacity(0.45); Color.black.opacity(0.12)
+            default: Color.black.opacity(0.42)
             }
-            if let tint { tint.opacity(0.55) }
-            LinearGradient(colors: [.white.opacity(0.12), .clear], startPoint: .top, endPoint: .center)
+            if let tint { tint.opacity(style == .clearGlass ? 0.35 : 0.55) }
+            // Sheen: light pooling at the top of the glass.
+            LinearGradient(colors: [.white.opacity(0.16), .white.opacity(0.03), .clear],
+                           startPoint: .top, endPoint: .center)
         }
     }
 }
