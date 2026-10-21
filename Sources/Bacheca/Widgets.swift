@@ -30,7 +30,9 @@ struct LockScreenView: View {
 /// Stand-in for the lock screen: the desktop wallpaper, system clock and login, to judge placement.
 struct PreviewBackdrop: View {
     private static let wallpaper: NSImage? = {
-        guard let screen = NSScreen.main, let url = NSWorkspace.shared.desktopImageURL(for: screen) else { return nil }
+        // `--demo` keeps the neutral gradient, for screenshots that shouldn't show the user's wallpaper.
+        guard !CommandLine.arguments.contains("--demo"),
+              let screen = NSScreen.main, let url = NSWorkspace.shared.desktopImageURL(for: screen) else { return nil }
         return NSImage(contentsOf: url)
     }()
 
@@ -41,8 +43,9 @@ struct PreviewBackdrop: View {
                     Image(nsImage: image).resizable().scaledToFill()
                         .frame(width: geo.size.width, height: geo.size.height).clipped()
                 } else {
-                    LinearGradient(colors: [Color(red: 0.10, green: 0.20, blue: 0.16), Color(red: 0.06, green: 0.12, blue: 0.16)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                    LinearGradient(colors: [Color(red: 0.16, green: 0.22, blue: 0.42), Color(red: 0.55, green: 0.36, blue: 0.52),
+                                            Color(red: 0.93, green: 0.58, blue: 0.42)],
+                                   startPoint: .top, endPoint: .bottom)
                 }
                 VStack(spacing: 2) {
                     Text(Date.now, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated))

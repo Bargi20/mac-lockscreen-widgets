@@ -14,8 +14,14 @@ final class SkyLight {
     private typealias ShowSpaces = @convention(c) (Int32, CFArray) -> Int32
     private typealias SpaceAddWindowsAndRemoveFromSpaces = @convention(c) (Int32, Int32, CFArray, Int32) -> Int32
 
-    /// kSLSSpaceAbsoluteLevelNotificationCenterAtScreenLock: above the lock screen (300).
-    private static let lockScreenLevel: Int32 = 400
+    /// Between the lock screen (kCGSSpaceAbsoluteLevelScreenLock, 300) and notifications at the lock
+    /// screen (400), which is where other lock-screen overlays built on SkyLightWindow live, such as a
+    /// Face ID style unlock prompt: the widgets stay under them. Override with
+    /// `defaults write local.bacheca.lockwidgets skyLightLevel -int 400`.
+    private static var lockScreenLevel: Int32 {
+        let saved = UserDefaults.standard.integer(forKey: "skyLightLevel")
+        return saved > 300 ? Int32(saved) : 350
+    }
 
     private let connection: Int32
     private let space: Int32

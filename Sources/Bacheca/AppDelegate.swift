@@ -17,8 +17,10 @@ final class OverlayWindow: NSWindow {
         ignoresMouseEvents = !interactive
         canBecomeVisibleWithoutLogin = true
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
-        // The studio sits above the menu bar but below drag images, so drag and drop stays visible.
-        level = interactive ? NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 2) : NSWindow.Level(rawValue: Int(Int32.max - 2))
+        // Above the menu bar but below drag images (so drag and drop stays visible in the studio)
+        // and below overlays such as a Face ID style prompt at mainMenu + 4. On the lock screen,
+        // SkyLight lifts the window above the lock screen itself.
+        level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 2)
         setFrame(screen.frame, display: false)
     }
 

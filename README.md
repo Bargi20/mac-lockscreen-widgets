@@ -2,6 +2,12 @@
 
 Bacheca puts customizable widgets (weather, music with synced lyrics, calendar, reminders, photos, notes and more) on the Mac lock screen. You arrange them freely in a full-screen studio, like iPhone widgets. Requires macOS 15 or later.
 
+![Widgets laid out on the grid in the Bacheca studio](docs/studio.jpg)
+
+Every widget comes in four sizes; click one in the bar to see them all live before adding it:
+
+![Size gallery showing the weather widget in small, medium, large and extra large](docs/size-gallery.jpg)
+
 The app follows the system language: Italian on Macs set to Italian, English everywhere else. Dates, the first day of the week and permission prompts follow the system too.
 
 The `prototype/` folder holds the first web prototype of the lock screen, to open in a browser.
@@ -49,11 +55,12 @@ Up to 16 widgets. Every widget (except notes and photos) can drop its card and s
 
 Card styles: Glass, Tinted glass, Dark, Light, Solid, Outline, No background. Color, overall size and font (Standard, Rounded, Serif, Mono) are in Settings.
 
-`open build/Bacheca.app --args --preview` opens the studio straight away, handy while developing (`--gallery` and `--grid` also open the size gallery and show the grid).
+`open build/Bacheca.app --args --preview` opens the studio straight away, handy while developing (`--gallery` and `--grid` also open the size gallery and show the grid; `--demo` uses a neutral gradient instead of your wallpaper, as in the screenshots above).
 
 ## How it works
 
 - The widget window is moved into a private WindowServer "space" above the lock screen, using undocumented SkyLight APIs (technique from [SkyLightWindow](https://github.com/Lakr233/SkyLightWindow), MIT license). They may stop working after a macOS update: Settings then says so, and the studio keeps working.
+- That space sits at absolute level 350: above the lock screen (300) but below lock-screen overlays at 400, such as other apps built on SkyLightWindow (for example a Face ID style unlock prompt), so their windows stay in front of the widgets. To put the widgets above them instead: `defaults write local.bacheca.lockwidgets skyLightLevel -int 400`.
 - The lock screen window takes no clicks or keystrokes, so it never gets in the way of the password field.
 - A check every 2 seconds hides the widgets if the Mac turns out to be unlocked, even if the unlock notification is missed.
 - The app is ad-hoc signed: it runs on this Mac and isn't ready for distribution.
