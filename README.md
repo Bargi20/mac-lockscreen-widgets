@@ -1,3 +1,5 @@
+<img src="docs/icon.png" alt="Bacheca app icon" width="128" align="right">
+
 # Bacheca · Mac lock screen widgets
 
 Bacheca puts customizable widgets (weather, music with synced lyrics, calendar, reminders, photos, notes and more) on the Mac lock screen. You arrange them freely in a full-screen studio, like iPhone widgets. Requires macOS 15 or later.
@@ -87,6 +89,7 @@ Card styles: Clear glass (default) and Glass use Liquid Glass on macOS 26 and la
 - `SettingsView.swift`: the Settings window
 - `Config.swift`: model, grid and saved preferences
 - `L10n.swift`: Italian or English, following the system
+- `scripts/make-icon.swift`: draws the app icon (`Resources/AppIcon.icns`, `docs/icon.png`); run `swift scripts/make-icon.swift` after changing it
 
 ## License
 
