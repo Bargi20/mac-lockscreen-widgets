@@ -53,7 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if CommandLine.arguments.contains("--preview") {
             showPreview()
-        } else if env.store.isFirstLaunch {
+        } else if env.store.isFirstLaunch || CommandLine.arguments.contains("--settings") {
             openSettings()
         }
     }
@@ -126,14 +126,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func openSettings() {
         if settingsWindow == nil {
-            let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 560, height: 700),
-                styleMask: [.titled, .closable, .miniaturizable, .resizable],
-                backing: .buffered, defer: false)
-            window.title = "Bacheca"
+            // A standard Mac Settings window: one toolbar tab per pane, titled after the selected pane.
+            let tabs = NSTabViewController()
+            tabs.tabStyle = .toolbar
+            let panes: [(AnyView, String, String)] = [
+                (AnyView(GeneralSettings(onArrange: { [weak self] in self?.showPreview() })), tr("Generale", "General"), "gearshape"),
+                (AnyView(WidgetsSettings()), tr("Widget", "Widgets"), "square.grid.2x2"),
+                (AnyView(AppearanceSettings()), tr("Aspetto", "Appearance"), "paintbrush"),
+            ]
+            for (view, label, symbol) in panes {
+                let controller = NSHostingController(rootView: env.inject(view))
+                controller.sizingOptions = .preferredContentSize
+                controller.title = label // the window takes the selected pane's title
+                let item = NSTabViewItem(viewController: controller)
+                item.label = label
+                item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
+                tabs.addTabViewItem(item)
+            }
+            // Development aid: `--settings-tab N` opens pane N.
+            if let i = CommandLine.arguments.firstIndex(of: "--settings-tab"), i + 1 < CommandLine.arguments.count,
+               let n = Int(CommandLine.arguments[i + 1]), tabs.tabViewItems.indices.contains(n) {
+                tabs.selectedTabViewItemIndex = n
+            }
+            let window = NSWindow(contentViewController: tabs)
+            window.styleMask = [.titled, .closable, .miniaturizable]
+            window.toolbarStyle = .preference
             window.isReleasedWhenClosed = false
-            let settings = SettingsView(onPreview: { [weak self] in self?.showPreview() })
-            window.contentView = NSHostingView(rootView: env.inject(settings))
             window.center()
             settingsWindow = window
         }

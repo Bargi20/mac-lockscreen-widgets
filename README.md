@@ -32,6 +32,16 @@ The app lives in the menu bar (padlock icon). From there open **Settings…** or
 
 To try it for real, lock the Mac with ⌃⌘Q: the widgets appear over the lock screen and go away when you log in.
 
+## Settings
+
+A standard Mac Settings window with three panes: **General** (arrange widgets, open at login, weather city, permissions), **Widgets** (size, back and options for each widget) and **Appearance** (card style with a live preview, font, size, grid).
+
+<p>
+  <img src="docs/settings-general.png" alt="General settings pane" width="32%">
+  <img src="docs/settings-widgets.png" alt="Widgets settings pane" width="32%">
+  <img src="docs/settings-appearance.png" alt="Appearance settings pane with a live preview" width="32%">
+</p>
+
 ## Widgets
 
 Like iPhone widgets, every widget comes in four sizes, each with its own layout: **S** small (square), **M** medium (rectangle), **L** large (big square), **XL** extra large.
@@ -57,7 +67,7 @@ Weather cards take on the sky of the current conditions (clear, cloudy, rain, sn
 
 Card styles: Clear glass (default) and Glass use Liquid Glass on macOS 26 and later (blur materials on earlier systems), plus Tinted glass, Dark, Light, Solid, Outline and No background. Color, overall size and font (Standard, Rounded, Serif, Mono) are in Settings. With Reduce Transparency on, glass cards turn solid.
 
-`open build/Bacheca.app --args --preview` opens the studio straight away, handy while developing (`--gallery` and `--grid` also open the size gallery and show the grid; `--demo` uses a neutral gradient instead of your wallpaper, as in the screenshots above).
+`open build/Bacheca.app --args --preview` opens the studio straight away, handy while developing (`--gallery` and `--grid` also open the size gallery and show the grid; `--demo` uses a neutral gradient instead of your wallpaper, as in the screenshots above; `--settings` opens Settings, `--settings-tab N` on pane N).
 
 ## How it works
 
