@@ -254,7 +254,7 @@ struct Config: Codable {
     var scale: Double = 1.0
     var style: CardStyle = .glass
     var accent: RGBA = .defaultAccent
-    var fontStyle: FontStyle = .rounded
+    var fontStyle: FontStyle = .standard
     /// Widgets snap to a centered grid in the studio, like iPhone home screen icons.
     var snapToGrid = true
     var weatherCity: String = tr("Milano", "Milan")
@@ -383,10 +383,15 @@ struct LayoutGrid {
 
 /// Card geometry shared by the lock screen, the studio and auto layout.
 struct Metrics {
+    /// Scale of everything inside a card. Contents are laid out against a 92 pt unit; the factor brings
+    /// a small widget to 140 pt at scale 1, with spacing and corner radius in the proportions of macOS widgets.
     let s: Double
+
+    init(s scale: Double) { s = scale * 140 / 92 }
+
     var unit: CGFloat { 92 * s }
-    var gap: CGFloat { 14 * s }
-    var radius: CGFloat { 24 * s }
+    var gap: CGFloat { 10.5 * s }
+    var radius: CGFloat { 12.5 * s }
     func size(_ size: WidgetSize) -> CGSize {
         CGSize(width: unit * CGFloat(size.cols) + gap * CGFloat(size.cols - 1),
                height: unit * CGFloat(size.rows) + gap * CGFloat(size.rows - 1))

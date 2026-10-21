@@ -308,7 +308,7 @@ private struct WeatherWidget: View {
                     Text("\(Int(w.temperature.rounded()))°").font(.system(size: 30 * s, weight: .light))
                     Spacer(minLength: 0)
                     Image(systemName: w.symbol).symbolRenderingMode(.multicolor).font(.system(size: 14 * s))
-                    Text("↑\(Int(w.max.rounded()))° ↓\(Int(w.min.rounded()))°").font(.system(size: 10 * s, weight: .semibold)).opacity(0.85)
+                    Text(highLow(w)).font(.system(size: 10 * s, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .padding(11 * s)
@@ -317,8 +317,8 @@ private struct WeatherWidget: View {
                     VStack(alignment: .leading, spacing: 2 * s) {
                         cityLabel
                         Text("\(Int(w.temperature.rounded()))°").font(.system(size: 32 * s, weight: .light))
-                        Text("\(w.label) · ↑\(Int(w.max.rounded()))° ↓\(Int(w.min.rounded()))°")
-                            .font(.system(size: 10.5 * s, weight: .semibold)).opacity(0.85).lineLimit(1)
+                        Text(w.label).font(.system(size: 10.5 * s, weight: .semibold)).lineLimit(1)
+                        Text(highLow(w)).font(.system(size: 10.5 * s, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer(minLength: 0)
                     Image(systemName: w.symbol).symbolRenderingMode(.multicolor).font(.system(size: 30 * s))
@@ -341,7 +341,7 @@ private struct WeatherWidget: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     VStack(alignment: .leading, spacing: 8 * s) {
-                        Text(tr("DETTAGLI", "DETAILS")).font(.system(size: 9 * s, weight: .bold)).opacity(0.6)
+                        Text(tr("Dettagli", "Details")).font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary)
                         stats(w, spacing: 9)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -354,6 +354,12 @@ private struct WeatherWidget: View {
                 Text(failed ? tr("Meteo non disponibile", "Weather unavailable") : tr("Caricamento…", "Loading…")).font(.system(size: 11 * s, weight: .semibold))
             }
         }
+    }
+
+    /// "H:20° L:13°", as macOS writes it.
+    private func highLow(_ w: WeatherNow) -> String {
+        let hi = Int(w.max.rounded()), lo = Int(w.min.rounded())
+        return tr("Max \(hi)° Min \(lo)°", "H:\(hi)° L:\(lo)°")
     }
 
     private var cityLabel: some View {
@@ -589,7 +595,7 @@ private struct EventsWidget: View {
         let s = m.s
         VStack(alignment: .leading, spacing: 4 * s) {
             Label(tr("Prossimi eventi", "Up Next"), systemImage: "calendar")
-                .font(.system(size: 10 * s, weight: .bold)).textCase(.uppercase).opacity(0.75).lineLimit(1)
+                .font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
             if !access {
                 Text(tr("Consenti l'accesso dalle impostazioni", "Allow access in Settings")).font(.system(size: 12 * s, weight: .semibold))
             } else if events.isEmpty {
@@ -645,7 +651,7 @@ private struct RemindersWidget: View {
         } else {
             VStack(alignment: .leading, spacing: 4 * s) {
                 Label(tr("Promemoria", "Reminders"), systemImage: "checklist")
-                    .font(.system(size: 10 * s, weight: .bold)).textCase(.uppercase).opacity(0.75)
+                    .font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary)
                 if !access {
                     Text(tr("Consenti l'accesso dalle impostazioni", "Allow access in Settings")).font(.system(size: 12 * s, weight: .semibold))
                 } else if reminders.isEmpty {
@@ -714,7 +720,7 @@ private struct Gauge: View {
                 }
                 .frame(width: 60 * s, height: 60 * s)
                 VStack(alignment: .leading, spacing: 2 * s) {
-                    Text(label).font(.system(size: 10 * s, weight: .bold)).textCase(.uppercase).opacity(0.7)
+                    Text(label).font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary)
                     Text(value).font(.system(size: (size == .wide ? 40 : 26) * s, weight: .light))
                     Text(detail).font(.system(size: 10.5 * s, weight: .semibold)).opacity(0.8).lineLimit(1).minimumScaleFactor(0.75)
                     if size == .wide {
@@ -766,7 +772,7 @@ private struct MoonWidget: View {
             HStack(spacing: 16 * s) {
                 MoonView(phase: p).frame(width: (size == .wide ? 150 : 64) * s, height: (size == .wide ? 150 : 64) * s)
                 VStack(alignment: .leading, spacing: 3 * s) {
-                    Text(tr("LUNA", "MOON")).font(.system(size: 10 * s, weight: .bold)).opacity(0.7)
+                    Text(tr("Luna", "Moon")).font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary)
                     Text(moonName(p)).font(.system(size: (size == .wide ? 22 : 15) * s, weight: .semibold))
                     Text(tr("Illuminata al \(lit)%", "\(lit)% illuminated")).font(.system(size: 10.5 * s, weight: .medium)).opacity(0.8)
                     Text(toFull == 0 ? tr("Luna piena oggi", "Full moon today")
@@ -797,7 +803,7 @@ private struct CountdownWidget: View {
         case .small:
             VStack(spacing: 2 * s) {
                 Text("\(abs(days))").font(.system(size: 30 * s, weight: .bold))
-                Text(unit.uppercased()).font(.system(size: 8 * s, weight: .bold)).opacity(0.75)
+                Text(unit).font(.system(size: 9.5 * s, weight: .semibold)).foregroundStyle(.secondary)
                 Text(label).font(.system(size: 10 * s, weight: .semibold)).lineLimit(1).opacity(0.85)
             }
             .padding(.horizontal, 8 * s)
@@ -805,7 +811,7 @@ private struct CountdownWidget: View {
             VStack(spacing: 4 * s) {
                 Image(systemName: "flag.checkered").font(.system(size: 18 * s))
                 Text("\(abs(days))").font(.system(size: 64 * s, weight: .light))
-                Text(unit.uppercased()).font(.system(size: 10 * s, weight: .bold)).opacity(0.75)
+                Text(unit).font(.system(size: 12 * s, weight: .semibold)).foregroundStyle(.secondary)
                 Text(label).font(.system(size: 15 * s, weight: .semibold)).lineLimit(1)
                 Text(dateText).font(.system(size: 10.5 * s, weight: .medium)).opacity(0.7)
             }
@@ -814,7 +820,7 @@ private struct CountdownWidget: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2 * s) {
                     Label(label, systemImage: "flag.checkered")
-                        .font(.system(size: 10 * s, weight: .bold)).textCase(.uppercase).opacity(0.75).lineLimit(1)
+                        .font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
                     Spacer(minLength: 0)
                     Text(dateText).font(.system(size: 11 * s, weight: .semibold)).opacity(0.8)
                 }
@@ -892,7 +898,7 @@ private struct NowPlayingWidget: View {
                     Image(systemName: "waveform").font(.system(size: 12 * s, weight: .semibold)).opacity(0.8)
                 }
             }
-            Text(music.artist ?? "").textCase(.uppercase)
+            Text(music.artist ?? "")
                 .font(.system(size: artistSize * s, weight: .semibold)).opacity(0.7).lineLimit(1)
         } else {
             Text(tr("Niente in riproduzione", "Nothing playing")).font(.system(size: 14 * s, weight: .bold))
@@ -974,7 +980,7 @@ private struct LyricsWidget: View {
             VStack(alignment: center ? .center : .leading, spacing: (sz == .wide || sz == .large ? 10 : 5) * s) {
                 if !item.bare && sz != .small {
                     Label(header, systemImage: "quote.bubble")
-                        .font(.system(size: 10 * s, weight: .bold)).textCase(.uppercase).opacity(0.75).lineLimit(1)
+                        .font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
                 }
                 switch (music.title == nil, lyrics.state) {
                 case (true, _):
@@ -1045,7 +1051,7 @@ private struct ClockWidget: View {
                     ClockFace(date: ctx.date, timeZone: timeZone, seconds: true)
                         .frame(width: (size == .wide ? 160 : 62) * s, height: (size == .wide ? 160 : 62) * s)
                     VStack(alignment: .leading, spacing: 2 * s) {
-                        Text((title ?? tr("Ora locale", "Local time")).uppercased()).font(.system(size: 10 * s, weight: .bold)).opacity(0.7).lineLimit(1)
+                        Text(title ?? tr("Ora locale", "Local time")).font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
                         Text(ctx.date, format: digital).font(.system(size: (size == .wide ? 52 : 26) * s, weight: .light))
                             .lineLimit(1).minimumScaleFactor(0.6)
                         Text(title == nil ? ctx.date.formatted(.dateTime.weekday(.wide).day().month(.wide)) : offsetText(timeZone, now: ctx.date))
@@ -1191,9 +1197,7 @@ struct MoonView: View {
                 lit.addLine(to: CGPoint(x: c.x + side * r * cos(t) * k, y: c.y + r * sin(t)))
             }
             lit.closeSubpath()
-            var glow = ctx
-            glow.addFilter(.shadow(color: .white.opacity(0.45), radius: r * 0.18))
-            glow.fill(lit, with: .radialGradient(
+            ctx.fill(lit, with: .radialGradient(
                 Gradient(colors: [.white, Color(white: 0.86), Color(white: 0.72)]),
                 center: CGPoint(x: c.x - side * r * 0.25, y: c.y - r * 0.3), startRadius: 0, endRadius: r * 1.4))
         }
