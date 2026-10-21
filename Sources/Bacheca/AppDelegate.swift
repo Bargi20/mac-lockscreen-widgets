@@ -53,7 +53,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated { self?.hideLockWidgets() }
         }
 
-        if CommandLine.arguments.contains("--preview") {
+        if CommandLine.arguments.contains("--lock-preview") {
+            showLockWidgets(simulated: true)
+        } else if CommandLine.arguments.contains("--preview") {
             showPreview()
         } else if env.store.isFirstLaunch || CommandLine.arguments.contains("--settings") {
             openSettings()
@@ -81,17 +83,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showLockWidgets()
     }
 
-    private func showLockWidgets() {
+    /// `simulated` shows the lock screen layout over the desktop for a few seconds (`--lock-preview`).
+    private func showLockWidgets(simulated: Bool = false) {
         hideLockWidgets()
         lockActivity = ProcessInfo.processInfo.beginActivity(
             options: [.userInitiatedAllowingIdleSystemSleep, .latencyCritical],
             reason: "Showing widgets on the lock screen")
         guard let screen = NSScreen.screens.first else { return }
         let window = OverlayWindow(screen: screen, interactive: false)
-        window.contentView = NSHostingView(rootView: env.inject(LockScreenView(mode: .lock)))
-        SkyLight.shared?.adopt(window)
+        window.contentView = NSHostingView(rootView: env.inject(LockScreenView(mode: .lock, backdrop: LockBackdrop.make(for: screen))))
+        if !simulated { SkyLight.shared?.adopt(window) }
         window.orderFrontRegardless()
         lockWindows = [window]
+        if simulated {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+                MainActor.assumeIsolated { self?.hideLockWidgets() }
+            }
+            return
+        }
 
         // If the unlock notification is ever missed, don't leave widgets over the desktop.
         lockWatchdog = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in

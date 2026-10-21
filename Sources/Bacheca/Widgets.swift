@@ -6,6 +6,8 @@ struct LockScreenView: View {
     enum Mode { case lock, preview }
     let mode: Mode
     var onClose: () -> Void = {}
+    /// Blurred wallpaper for glass cards on the lock screen (see `LockBackdrop`).
+    var backdrop: LockBackdrop? = nil
 
     @EnvironmentObject var store: ConfigStore
 
@@ -16,9 +18,15 @@ struct LockScreenView: View {
                     PreviewBackdrop()
                     StudioCanvas(screen: geo.size, onClose: onClose)
                 } else {
+                    let m = Metrics(s: store.config.scale)
                     ForEach(store.config.items) { item in
+                        let size = m.size(item.size)
+                        let center = CGPoint(x: item.x * geo.size.width, y: item.y * geo.size.height)
                         WidgetCard(item: item)
-                            .position(x: item.x * geo.size.width, y: item.y * geo.size.height)
+                            .environment(\.lockBackdrop, backdrop.map {
+                                LockBackdropPlacement(backdrop: $0, origin: CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2))
+                            })
+                            .position(center)
                     }
                 }
             }
@@ -207,10 +215,14 @@ private struct CardBackground: ViewModifier {
     /// Color the glass takes on (the weather sky); the tinted style uses the accent instead.
     let tint: Color?
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lockBackdrop) private var lockBackdrop
 
     func body(content: Content) -> some View {
         if reduceTransparency && style.isGlass {
             content.background(style == .tinted ? accent.opacity(0.85) : (tint ?? Color(white: 0.17)), in: shape)
+        } else if let lockBackdrop, style.isGlass {
+            // Over the lock screen real glass comes out empty: draw it from the wallpaper instead.
+            content.modifier(WallpaperGlass(placement: lockBackdrop, style: style, accent: accent, tint: tint, shape: shape))
         } else {
             styled(content)
         }
