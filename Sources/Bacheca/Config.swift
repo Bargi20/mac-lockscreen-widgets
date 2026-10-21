@@ -260,6 +260,8 @@ struct Config: Codable {
     var fontStyle: FontStyle = .standard
     /// Widgets snap to a centered grid in the studio, like iPhone home screen icons.
     var snapToGrid = true
+    /// Real glass on the lock screen, drawn over a capture of the wallpaper (needs Screen Recording).
+    var lockGlassCapture = false
     var weatherCity: String = tr("Milano", "Milan")
     var latitude: Double = 45.4643
     var longitude: Double = 9.1895
@@ -302,6 +304,7 @@ extension Config {
         accent = try c.decodeIfPresent(RGBA.self, forKey: .accent) ?? accent
         fontStyle = try c.decodeIfPresent(FontStyle.self, forKey: .fontStyle) ?? fontStyle
         snapToGrid = try c.decodeIfPresent(Bool.self, forKey: .snapToGrid) ?? snapToGrid
+        lockGlassCapture = try c.decodeIfPresent(Bool.self, forKey: .lockGlassCapture) ?? lockGlassCapture
         weatherCity = try c.decodeIfPresent(String.self, forKey: .weatherCity) ?? weatherCity
         latitude = try c.decodeIfPresent(Double.self, forKey: .latitude) ?? latitude
         longitude = try c.decodeIfPresent(Double.self, forKey: .longitude) ?? longitude

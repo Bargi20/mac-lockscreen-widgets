@@ -370,6 +370,8 @@ struct AppearanceSettings: View {
                     .foregroundStyle(.secondary)
             }
 
+            LockGlassSection()
+
             Section {
                 Toggle(tr("Allinea i widget alla griglia", "Snap widgets to the grid"), isOn: $store.config.snapToGrid)
             } footer: {
@@ -391,6 +393,7 @@ private struct AppearancePreview: View {
               let screen = NSScreen.main, let url = NSWorkspace.shared.desktopImageURL(for: screen) else { return nil }
         return PhotoLibrary.shared.image(url)
     }()
+    @EnvironmentObject private var capture: WallpaperCapture
 
     var body: some View {
         let m = Metrics(s: store.config.scale)
@@ -398,7 +401,7 @@ private struct AppearancePreview: View {
         let height: CGFloat = 170
         let fit = min(1, (height - 36) / small.height)
         ZStack {
-            if let image = Self.wallpaper {
+            if let image = (CommandLine.arguments.contains("--demo") ? nil : capture.image) ?? Self.wallpaper {
                 Image(nsImage: image).resizable().scaledToFill()
             } else {
                 LinearGradient(colors: [Color(red: 0.16, green: 0.22, blue: 0.42), Color(red: 0.93, green: 0.58, blue: 0.42)],
@@ -415,5 +418,40 @@ private struct AppearancePreview: View {
         .frame(height: height)
         .frame(maxWidth: .infinity)
         .clipped()
+    }
+}
+
+/// The option for real glass on the lock screen, with the Screen Recording permission it needs.
+private struct LockGlassSection: View {
+    @EnvironmentObject var store: ConfigStore
+    @EnvironmentObject var wallpaper: WallpaperCapture
+
+    var body: some View {
+        Section {
+            Toggle(tr("Vetro vero sulla schermata di blocco", "Real glass on the lock screen"), isOn: Binding(
+                get: { store.config.lockGlassCapture },
+                set: { on in
+                    store.config.lockGlassCapture = on
+                    if on {
+                        wallpaper.requestPermission()
+                        wallpaper.refresh()
+                    }
+                }))
+            if store.config.lockGlassCapture {
+                LabeledContent(tr("Registrazione schermo", "Screen Recording")) {
+                    if wallpaper.hasPermission {
+                        Label(wallpaper.image == nil ? tr("Consentita", "Allowed") : tr("Sfondo catturato", "Wallpaper captured"),
+                              systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(SystemColor.green)
+                    } else {
+                        Button(tr("Apri Impostazioni di Sistema…", "Open System Settings…")) { WallpaperCapture.openPrivacySettings() }
+                    }
+                }
+            }
+        } footer: {
+            Text(tr("Sopra la schermata di blocco macOS non lascia vedere cosa c'è dietro, e senza questa opzione i widget di vetro diventano pannelli traslucidi. Con l'opzione attiva Bacheca cattura solo lo sfondo, mai le finestre, mentre il Mac è sbloccato, e lo usa per disegnare il vetro vero. Serve il permesso Registrazione schermo; dopo averlo dato, riapri Bacheca.",
+                    "Over the lock screen macOS hides what is behind, so without this option glass widgets become translucent panels. With it on, Bacheca captures only the wallpaper, never your windows, while the Mac is unlocked, and uses it to draw real glass. It needs the Screen Recording permission; after granting it, reopen Bacheca."))
+                .foregroundStyle(.secondary)
+        }
     }
 }

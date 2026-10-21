@@ -16,10 +16,13 @@ struct LockScreenView: View {
                     PreviewBackdrop()
                     StudioCanvas(screen: geo.size, onClose: onClose)
                 } else {
+                    let m = Metrics(s: store.config.scale)
                     ForEach(store.config.items) { item in
+                        let size = m.size(item.size)
+                        let center = CGPoint(x: item.x * geo.size.width, y: item.y * geo.size.height)
                         WidgetCard(item: item)
-                            .environment(\.onLockScreen, true)
-                            .position(x: item.x * geo.size.width, y: item.y * geo.size.height)
+                            .environment(\.lockOrigin, CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2))
+                            .position(center)
                     }
                 }
             }
@@ -36,11 +39,14 @@ struct PreviewBackdrop: View {
               let screen = NSScreen.main, let url = NSWorkspace.shared.desktopImageURL(for: screen) else { return nil }
         return NSImage(contentsOf: url)
     }()
+    /// The real wallpaper when the lock screen glass option captures it; macOS reports a default
+    /// picture instead of dynamic wallpapers such as Macintosh.
+    @EnvironmentObject private var capture: WallpaperCapture
 
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .top) {
-                if let image = Self.wallpaper {
+                if let image = (CommandLine.arguments.contains("--demo") ? nil : capture.image) ?? Self.wallpaper {
                     Image(nsImage: image).resizable().scaledToFill()
                         .frame(width: geo.size.width, height: geo.size.height).clipped()
                 } else {
@@ -208,14 +214,21 @@ private struct CardBackground: ViewModifier {
     /// Color the glass takes on (the weather sky); the tinted style uses the accent instead.
     let tint: Color?
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.onLockScreen) private var onLockScreen
+    @Environment(\.lockOrigin) private var lockOrigin
+    @EnvironmentObject private var wallpaper: WallpaperCapture
+    @EnvironmentObject private var store: ConfigStore
 
     func body(content: Content) -> some View {
         if reduceTransparency && style.isGlass {
             content.background(style == .tinted ? accent.opacity(0.85) : (tint ?? Color(white: 0.17)), in: shape)
-        } else if onLockScreen, style.isGlass {
-            // Over the lock screen real glass comes out empty (see LockScreenGlass).
-            content.modifier(LockScreenGlass(style: style, accent: accent, tint: tint, shape: shape))
+        } else if let lockOrigin, style.isGlass {
+            // Over the lock screen real glass has nothing to refract (see LockScreenGlass.swift).
+            if store.config.lockGlassCapture, let image = wallpaper.image {
+                content.modifier(CapturedGlass(wallpaper: image, origin: lockOrigin, screen: image.size,
+                                               style: style, accent: accent, tint: tint, shape: shape))
+            } else {
+                content.modifier(LockScreenPanel(style: style, accent: accent, tint: tint, shape: shape))
+            }
         } else {
             styled(content)
         }

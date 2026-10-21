@@ -50,7 +50,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated { self?.screenLocked() }
         }
         dnc.addObserver(forName: .init("com.apple.screenIsUnlocked"), object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.hideLockWidgets() }
+            MainActor.assumeIsolated {
+                self?.hideLockWidgets()
+                // The wallpaper may have moved on while locked: take a fresh capture for next time.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    MainActor.assumeIsolated { self?.env.captureWallpaper() }
+                }
+            }
         }
 
         if CommandLine.arguments.contains("--lock-preview") {
@@ -92,7 +98,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let screen = NSScreen.screens.first else { return }
         let window = OverlayWindow(screen: screen, interactive: false)
         window.contentView = NSHostingView(rootView: env.inject(LockScreenView(mode: .lock)))
-        if !simulated { SkyLight.shared?.adopt(window) }
+        // `--sky` also lifts the simulated layout into the SkyLight space, to test glass there.
+        if !simulated || CommandLine.arguments.contains("--sky") { SkyLight.shared?.adopt(window) }
         window.orderFrontRegardless()
         lockWindows = [window]
         if simulated {
