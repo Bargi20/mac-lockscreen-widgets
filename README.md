@@ -1,70 +1,74 @@
-# Bacheca · widget per la schermata di blocco del Mac
+# Bacheca · Mac lock screen widgets
 
-Bacheca mette widget personalizzabili (meteo, musica con testi sincronizzati, calendario, promemoria, foto, note e altro) sulla schermata di blocco del Mac. Si dispongono liberamente in uno studio a tutto schermo, come i widget dell'iPhone. Richiede macOS 15 o successivo.
+Bacheca puts customizable widgets (weather, music with synced lyrics, calendar, reminders, photos, notes and more) on the Mac lock screen. You arrange them freely in a full-screen studio, like iPhone widgets. Requires macOS 15 or later.
 
-La cartella `prototype/` contiene il primo prototipo web della schermata di blocco, da aprire nel browser.
+The app follows the system language: Italian on Macs set to Italian, English everywhere else. Dates, the first day of the week and permission prompts follow the system too.
 
-## Compilare e avviare
+The `prototype/` folder holds the first web prototype of the lock screen, to open in a browser.
+
+## Build and run
 
 ```bash
 ./build.sh
 open build/Bacheca.app
 ```
 
-L'app vive nella barra dei menu (icona con il lucchetto). Da lì apri **Impostazioni…** o **Disponi i widget…**.
+The app lives in the menu bar (padlock icon). From there open **Settings…** or **Arrange Widgets…**.
 
-**Disponi i widget** apre uno studio a tutto schermo sopra il tuo sfondo, con orologio e login finti per orientarti:
-- trascina i widget dove vuoi; al centro dello schermo si agganciano e compare una guida gialla;
-- tira la maniglia nell'angolo in basso a destra di un widget per cambiarne la dimensione: scatta alla più vicina tra S, M, L e XL;
-- fai clic su un widget per scegliere la dimensione (S · M · L · XL), togliergli il riquadro, scegliere il colore (nota) o eliminarlo;
-- fai clic su un widget nella barra in basso: si apre la galleria con l'anteprima dal vivo in tutte e quattro le dimensioni; fai clic su quella che vuoi o trascinala sullo schermo;
-- trascina un widget sul cestino per toglierlo;
-- **In righe** rimette tutto in righe ordinate sotto l'orologio; Esc o Fine per chiudere.
+**Arrange Widgets** opens a full-screen studio over your wallpaper, with a mock clock and login to help you place things:
+- drag widgets on the grid: they snap from cell to cell, so edges and spacing always line up. The grid is centered with an even number of columns, so groups come out symmetric; a dashed yellow line marks the middle;
+- hold ⌥ (Option) while dragging to place a widget freely; **Grid** turns snapping off;
+- **Align** moves every widget to its nearest grid cell; **In rows** lines them up in rows under the clock;
+- pull the handle in a widget's bottom-right corner to resize it: it snaps to the nearest of S, M, L and XL;
+- click a widget to pick its size (S · M · L · XL), remove its card, pick a color (sticky note) or delete it;
+- click a widget in the bottom bar to open the gallery with a live preview in all four sizes; click the one you want or drag it onto the screen;
+- drop a widget on the trash to remove it; Esc or **Done** closes the studio.
 
-Per provarla davvero, blocca il Mac con ⌃⌘Q: i widget compaiono sopra la schermata di blocco e spariscono quando accedi.
+To try it for real, lock the Mac with ⌃⌘Q: the widgets appear over the lock screen and go away when you log in.
 
-## Widget
+## Widgets
 
-Come i widget dell'iPhone, ogni widget ha quattro dimensioni, ognuna con il suo layout: **S** piccolo (quadrato), **M** medio (rettangolo), **L** grande (quadrato grande), **XL** extra grande.
+Like iPhone widgets, every widget comes in four sizes, each with its own layout: **S** small (square), **M** medium (rectangle), **L** large (big square), **XL** extra large.
 
-| Widget | Cosa cambia con la dimensione | Dati |
+| Widget | What changes with size | Data |
 | --- | --- | --- |
-| Meteo | S temperatura · M + condizioni · L + dettagli (percepita, umidità, vento, UV, pioggia, alba/tramonto) · XL tutto su due colonne | Open-Meteo, città a scelta |
-| In riproduzione | S copertina a tutto riquadro · M/XL copertina + brano + avanzamento · L copertina grande sopra | Musica e Spotify |
-| Testo della canzone | S riga attuale · M + successiva · XL tre righe · L sei righe | [LRCLIB](https://lrclib.net), posizione da Musica o Spotify |
-| Calendario | S giorno · M giorno + settimana · L mese · XL giorno, evento e mese | Calendario |
-| Prossimi eventi | S il prossimo · M uno · L tre · XL tre su due colonne | Calendario (chiede il permesso) |
-| Promemoria | S quanti ne restano · M due · L sei · XL otto su due colonne | Promemoria (chiede il permesso) |
-| Foto | riempie il riquadro | cartella a scelta, cambia ogni 1–60 minuti |
-| Nota adesiva | testo più grande nei formati grandi | testo e colore a scelta |
-| Orologio, Fuso orario | S quadrante · M/XL quadrante + ora digitale · L quadrante grande | calcolati sul Mac |
-| Batteria, Giornata | S anello · M anello + testo · L anello grande · XL + barra | calcolati sul Mac |
-| Fase lunare | S luna · M/XL + nome, % e prossima luna piena · L luna grande | calcolata sul Mac |
-| Conto alla rovescia | S giorni · M/XL nome, data e giorni · L numero grande | data a scelta |
+| Weather | S temperature · M + conditions · L + details (feels like, humidity, wind, UV, rain, sunrise/sunset) · XL everything in two columns | Open-Meteo, city of your choice |
+| Now Playing | S full-bleed artwork · M/XL artwork + track + progress · L large artwork on top | Music and Spotify |
+| Lyrics | S current line · M + next · XL three lines · L six lines | [LRCLIB](https://lrclib.net), position from Music or Spotify |
+| Calendar | S day · M day + week · L month · XL day, event and month | Calendar |
+| Up Next | S the next one · M one · L three · XL three in two columns | Calendar (asks for permission) |
+| Reminders | S how many are left · M two · L six · XL eight in two columns | Reminders (asks for permission) |
+| Photos | fills the card | folder of your choice, changes every 1–60 minutes |
+| Sticky Note | larger text in bigger sizes | your text and color |
+| Clock, World Clock | S dial · M/XL dial + digital time · L large dial | computed on the Mac |
+| Battery, Day | S ring · M ring + text · L large ring · XL + bar | computed on the Mac |
+| Moon Phase | S moon · M/XL + name, % and next full moon · L large moon | computed on the Mac |
+| Countdown | S days · M/XL name, date and days · L big number | date of your choice |
 
-Al massimo 16 widget. Ogni widget (tranne nota e foto) può stare senza riquadro, direttamente sullo sfondo.
+Up to 16 widgets. Every widget (except notes and photos) can drop its card and sit right on the wallpaper.
 
-Stili dei riquadri: Vetro, Vetro colorato, Scuro, Chiaro, Pieno, Contorno, Senza sfondo. Colore, dimensione generale e carattere (Standard, Arrotondato, Serif, Mono) si scelgono nelle impostazioni.
+Card styles: Glass, Tinted glass, Dark, Light, Solid, Outline, No background. Color, overall size and font (Standard, Rounded, Serif, Mono) are in Settings.
 
-`open build/Bacheca.app --args --preview` apre subito lo studio, utile mentre si sviluppa.
+`open build/Bacheca.app --args --preview` opens the studio straight away, handy while developing (`--gallery` and `--grid` also open the size gallery and show the grid).
 
-## Come funziona
+## How it works
 
-- La finestra dei widget viene spostata in uno "spazio" privato del WindowServer sopra la schermata di blocco, con le API non documentate di SkyLight (tecnica di [SkyLightWindow](https://github.com/Lakr233/SkyLightWindow), licenza MIT). Possono smettere di funzionare con un aggiornamento di macOS: in quel caso le impostazioni lo segnalano e l'anteprima continua a funzionare.
-- La finestra sulla schermata di blocco non riceve né clic né tastiera, quindi non interferisce con il campo della password.
-- Un controllo ogni 2 secondi nasconde i widget se il Mac risulta sbloccato, anche se la notifica di sblocco si perde.
-- La firma è ad-hoc: l'app funziona su questo Mac, non è pronta per essere distribuita.
+- The widget window is moved into a private WindowServer "space" above the lock screen, using undocumented SkyLight APIs (technique from [SkyLightWindow](https://github.com/Lakr233/SkyLightWindow), MIT license). They may stop working after a macOS update: Settings then says so, and the studio keeps working.
+- The lock screen window takes no clicks or keystrokes, so it never gets in the way of the password field.
+- A check every 2 seconds hides the widgets if the Mac turns out to be unlocked, even if the unlock notification is missed.
+- The app is ad-hoc signed: it runs on this Mac and isn't ready for distribution.
 
-## File
+## Files
 
-- `SkyLight.swift`: lo spazio sopra la schermata di blocco
-- `AppDelegate.swift`: barra dei menu, eventi di blocco/sblocco, finestre
-- `Widgets.swift`: layout e grafica dei widget
-- `Studio.swift`: studio a posizione libera, barra dei widget, opzioni del widget selezionato, cestino
-- `Services.swift`: meteo, musica, batteria, calendario
-- `SettingsView.swift`: finestra delle impostazioni
-- `Config.swift`: modello e salvataggio delle preferenze
+- `SkyLight.swift`: the space above the lock screen
+- `AppDelegate.swift`: menu bar, lock/unlock events, windows
+- `Widgets.swift`: widget layouts and drawing
+- `Studio.swift`: the studio with grid, widget bar, options for the selected widget, trash
+- `Services.swift`: weather, music, lyrics, battery, calendar, photos
+- `SettingsView.swift`: the Settings window
+- `Config.swift`: model, grid and saved preferences
+- `L10n.swift`: Italian or English, following the system
 
-## Licenza
+## License
 
-Bacheca è distribuita con licenza [MIT](LICENSE). Il codice ripreso da SkyLightWindow e i servizi usati (Open-Meteo, LRCLIB) sono elencati in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Bacheca is released under the [MIT](LICENSE) license. Code adapted from SkyLightWindow and the services it uses (Open-Meteo, LRCLIB) are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

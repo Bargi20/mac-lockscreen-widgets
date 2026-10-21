@@ -24,14 +24,14 @@ struct WeatherNow {
 
     var label: String {
         switch code {
-        case 0: "Sereno"
-        case 1, 2: "Poco nuvoloso"
-        case 3: "Coperto"
-        case 45, 48: "Nebbia"
-        case 51...57: "Pioviggine"
-        case 61...67, 80...82: "Pioggia"
-        case 71...77, 85, 86: "Neve"
-        case 95...99: "Temporale"
+        case 0: tr("Sereno", "Clear")
+        case 1, 2: tr("Poco nuvoloso", "Partly cloudy")
+        case 3: tr("Coperto", "Overcast")
+        case 45, 48: tr("Nebbia", "Fog")
+        case 51...57: tr("Pioviggine", "Drizzle")
+        case 61...67, 80...82: tr("Pioggia", "Rain")
+        case 71...77, 85, 86: tr("Neve", "Snow")
+        case 95...99: tr("Temporale", "Thunderstorm")
         default: "—"
         }
     }
@@ -122,7 +122,7 @@ final class WeatherService: ObservableObject {
 
     static func search(_ name: String) async -> Place? {
         var url = URLComponents(string: "https://geocoding-api.open-meteo.com/v1/search")!
-        url.queryItems = [.init(name: "name", value: name), .init(name: "count", value: "1"), .init(name: "language", value: "it")]
+        url.queryItems = [.init(name: "name", value: name), .init(name: "count", value: "1"), .init(name: "language", value: L10n.code)]
         guard let (data, _) = try? await URLSession.shared.data(from: url.url!),
               let r = try? JSONDecoder().decode(GeoResult.self, from: data) else { return nil }
         return r.results?.first
@@ -148,13 +148,13 @@ final class NowPlayingService: ObservableObject {
     var onTrackChange: (() -> Void)?
 
     private static let players: [(bundle: String, name: String, appName: String, durationInMs: Bool)] = [
-        ("com.apple.Music", "Musica", "Music", false),
+        ("com.apple.Music", tr("Musica", "Music"), "Music", false),
         ("com.spotify.client", "Spotify", "Spotify", true),
     ]
 
     init() {
         let center = DistributedNotificationCenter.default()
-        for (name, app) in [("com.apple.Music.playerInfo", "Musica"), ("com.spotify.client.PlaybackStateChanged", "Spotify")] {
+        for (name, app) in [("com.apple.Music.playerInfo", tr("Musica", "Music")), ("com.spotify.client.PlaybackStateChanged", "Spotify")] {
             center.addObserver(forName: .init(name), object: nil, queue: .main) { [weak self] note in
                 let info = note.userInfo ?? [:]
                 MainActor.assumeIsolated { self?.handle(info, app: app) }
@@ -459,7 +459,7 @@ final class CalendarService: ObservableObject {
                 .filter { !$0.isAllDay && $0.endDate > now }
                 .sorted { $0.startDate < $1.startDate }
                 .prefix(3)
-                .map { Event(title: $0.title ?? "Evento", start: $0.startDate, end: $0.endDate, location: $0.location) }
+                .map { Event(title: $0.title ?? tr("Evento", "Event"), start: $0.startDate, end: $0.endDate, location: $0.location) }
         } else {
             upcoming = []
         }
@@ -468,7 +468,7 @@ final class CalendarService: ObservableObject {
         let pred = store.predicateForIncompleteReminders(withDueDateStarting: nil, ending: nil, calendars: nil)
         store.fetchReminders(matching: pred) { items in
             let list = (items ?? [])
-                .map { Reminder(id: $0.calendarItemIdentifier, title: $0.title ?? "Promemoria", due: $0.dueDateComponents?.date) }
+                .map { Reminder(id: $0.calendarItemIdentifier, title: $0.title ?? tr("Promemoria", "Reminder"), due: $0.dueDateComponents?.date) }
                 .sorted { ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture) }
             let top = Array(list.prefix(8))
             Task { @MainActor in self.reminders = top }

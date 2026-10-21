@@ -12,10 +12,10 @@ enum WidgetSize: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .small: "Piccolo"
-        case .medium: "Medio"
-        case .large: "Grande"
-        case .wide: "Extra grande"
+        case .small: tr("Piccolo", "Small")
+        case .medium: tr("Medio", "Medium")
+        case .large: tr("Grande", "Large")
+        case .wide: tr("Extra grande", "Extra large")
         }
     }
 
@@ -37,20 +37,20 @@ enum WidgetKind: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .weather: "Meteo"
-        case .nowPlaying: "In riproduzione"
-        case .lyrics: "Testo della canzone"
-        case .calendar: "Calendario"
-        case .nextEvent: "Prossimo evento"
-        case .reminders: "Promemoria"
-        case .photo: "Foto"
-        case .note: "Nota adesiva"
-        case .analogClock: "Orologio"
-        case .battery: "Batteria"
-        case .dayProgress: "Giornata"
-        case .moon: "Fase lunare"
-        case .worldClock: "Fuso orario"
-        case .countdown: "Conto alla rovescia"
+        case .weather: tr("Meteo", "Weather")
+        case .nowPlaying: tr("In riproduzione", "Now Playing")
+        case .lyrics: tr("Testo della canzone", "Lyrics")
+        case .calendar: tr("Calendario", "Calendar")
+        case .nextEvent: tr("Prossimo evento", "Up Next")
+        case .reminders: tr("Promemoria", "Reminders")
+        case .photo: tr("Foto", "Photos")
+        case .note: tr("Nota adesiva", "Sticky Note")
+        case .analogClock: tr("Orologio", "Clock")
+        case .battery: tr("Batteria", "Battery")
+        case .dayProgress: tr("Giornata", "Day")
+        case .moon: tr("Fase lunare", "Moon Phase")
+        case .worldClock: tr("Fuso orario", "World Clock")
+        case .countdown: tr("Conto alla rovescia", "Countdown")
         }
     }
 
@@ -100,9 +100,9 @@ struct WidgetItem: Codable, Identifiable, Hashable {
     var bare = false
     var color: RGBA = .noteCoral
     var timeZone: String = "Asia/Tokyo"
-    var label: String = "Natale"
+    var label: String = tr("Natale", "Christmas")
     var date: Date = WidgetItem.nextChristmas()
-    var text: String = "Ricorda:\nPortatile\nPortafoglio\nChiavi"
+    var text: String = tr("Ricorda:\nPortatile\nPortafoglio\nChiavi", "Remember:\nLaptop\nWallet\nKeys")
     var folderPath: String = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures").path
     var photoMinutes: Int = 10
 
@@ -152,13 +152,13 @@ enum CardStyle: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .glass: "Vetro"
-        case .tinted: "Vetro colorato"
-        case .dark: "Scuro"
-        case .light: "Chiaro"
-        case .solid: "Pieno"
-        case .outline: "Contorno"
-        case .bare: "Senza sfondo"
+        case .glass: tr("Vetro", "Glass")
+        case .tinted: tr("Vetro colorato", "Tinted glass")
+        case .dark: tr("Scuro", "Dark")
+        case .light: tr("Chiaro", "Light")
+        case .solid: tr("Pieno", "Solid")
+        case .outline: tr("Contorno", "Outline")
+        case .bare: tr("Senza sfondo", "No background")
         }
     }
     var usesAccent: Bool { self == .tinted || self == .solid || self == .outline }
@@ -170,7 +170,7 @@ enum FontStyle: String, Codable, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .standard: "Standard"
-        case .rounded: "Arrotondato"
+        case .rounded: tr("Arrotondato", "Rounded")
         case .serif: "Serif"
         case .mono: "Mono"
         }
@@ -210,7 +210,7 @@ struct Config: Codable {
     var fontStyle: FontStyle = .rounded
     /// Widgets snap to a centered grid in the studio, like iPhone home screen icons.
     var snapToGrid = true
-    var weatherCity: String = "Milano"
+    var weatherCity: String = tr("Milano", "Milan")
     var latitude: Double = 45.4643
     var longitude: Double = 9.1895
 

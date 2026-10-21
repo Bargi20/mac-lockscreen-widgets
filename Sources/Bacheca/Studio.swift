@@ -26,7 +26,7 @@ final class EditState: ObservableObject {
 }
 
 private let newPrefix = "new:"
-private let fullMessage = "Hai già \(Config.maxItems) widget: togline uno prima"
+private let fullMessage = tr("Hai già \(Config.maxItems) widget: togline uno prima", "You already have \(Config.maxItems) widgets: remove one first")
 
 /// Drag payload for a new widget: "new:<kind>" or "new:<kind>:<size>".
 private func newPayload(_ kind: WidgetKind, _ size: WidgetSize? = nil) -> NSString {
@@ -256,7 +256,7 @@ private struct ResizeHandle: View {
             .background(.white, in: Circle())
             .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
             .contentShape(Circle().inset(by: -6))
-            .help("Trascina per cambiare dimensione")
+            .help(tr("Trascina per cambiare dimensione", "Drag to resize"))
             .gesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .named("studio"))
                     .onChanged { v in
@@ -313,7 +313,7 @@ private struct CardToolbar: View {
     var body: some View {
         HStack(spacing: 10) {
             Text(item.kind.title).font(.system(size: 12, weight: .semibold))
-            Picker("Dimensione", selection: binding(\.size)) {
+            Picker(tr("Dimensione", "Size"), selection: binding(\.size)) {
                 ForEach(item.kind.sizes) { Text($0.short).help($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
@@ -322,7 +322,7 @@ private struct CardToolbar: View {
             if item.kind != .note && item.kind != .photo {
                 Toggle(isOn: binding(\.bare)) { Image(systemName: "square.dashed") }
                     .toggleStyle(.button)
-                    .help("Senza riquadro: il widget sta direttamente sullo sfondo")
+                    .help(tr("Senza riquadro: il widget sta direttamente sullo sfondo", "No card: the widget sits right on the wallpaper"))
             }
             if item.kind == .note {
                 HStack(spacing: 5) {
@@ -340,7 +340,7 @@ private struct CardToolbar: View {
             } label: {
                 Image(systemName: "trash")
             }
-            .help("Rimuovi")
+            .help(tr("Rimuovi", "Remove"))
         }
         .padding(.horizontal, 12).padding(.vertical, 7)
         .background(.ultraThinMaterial, in: Capsule())
@@ -391,17 +391,17 @@ private struct StudioBar: View {
                 Divider().frame(height: 28)
 
                 Toggle(isOn: $store.config.snapToGrid) {
-                    Label("Griglia", systemImage: "squareshape.split.3x3")
+                    Label(tr("Griglia", "Grid"), systemImage: "squareshape.split.3x3")
                 }
                 .toggleStyle(.button)
-                .help("Con la griglia i widget scattano di casella in casella e restano allineati. Tieni premuto ⌥ per spostarli liberamente")
+                .help(tr("Con la griglia i widget scattano di casella in casella e restano allineati. Tieni premuto ⌥ per spostarli liberamente", "With the grid, widgets snap from cell to cell and stay aligned. Hold ⌥ to move them freely"))
 
                 Button {
                     withAnimation(.snappy) { store.config.snapAll(screen: screen) }
                 } label: {
-                    Label("Allinea", systemImage: "align.horizontal.center")
+                    Label(tr("Allinea", "Align"), systemImage: "align.horizontal.center")
                 }
-                .help("Sposta ogni widget sulla casella più vicina della griglia")
+                .help(tr("Sposta ogni widget sulla casella più vicina della griglia", "Move every widget to the nearest grid cell"))
 
                 Button {
                     withAnimation(.snappy) {
@@ -409,25 +409,25 @@ private struct StudioBar: View {
                         if store.config.snapToGrid { store.config.snapAll(screen: screen) }
                     }
                 } label: {
-                    Label("In righe", systemImage: "square.grid.2x2")
+                    Label(tr("In righe", "In rows"), systemImage: "square.grid.2x2")
                 }
-                .help("Rimetti i widget in righe ordinate sotto l'orologio")
+                .help(tr("Rimetti i widget in righe ordinate sotto l'orologio", "Put widgets back in tidy rows under the clock"))
 
                 Image(systemName: edit.overTrash ? "trash.fill" : "trash")
                     .font(.system(size: 17, weight: .semibold))
                     .frame(width: 42, height: 42)
                     .background(edit.overTrash ? Color.red.opacity(0.75) : Color.white.opacity(0.12), in: Circle())
                     .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named("studio")) }) { edit.trashFrame = $0.insetBy(dx: -12, dy: -12) }
-                    .help("Trascina qui un widget per toglierlo")
+                    .help(tr("Trascina qui un widget per toglierlo", "Drag a widget here to remove it"))
 
-                Button("Fine", action: onClose)
+                Button(tr("Fine", "Done"), action: onClose)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
             }
             .padding(12)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
 
-            Text("Trascina i widget sulla griglia (⌥ per muoverli liberamente) · tira l'angolo per cambiare dimensione · clic per le opzioni · sul cestino per toglierli · Esc per chiudere")
+            Text(tr("Trascina i widget sulla griglia (⌥ per muoverli liberamente) · tira l'angolo per cambiare dimensione · clic per le opzioni · sul cestino per toglierli · Esc per chiudere", "Drag widgets on the grid (⌥ to move freely) · pull the corner to resize · click for options · drop on the trash to remove · Esc to close"))
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.6))
         }
@@ -457,7 +457,7 @@ private struct PaletteChip: View {
         .contentShape(Capsule())
         .onDrag { NSItemProvider(object: newPayload(kind)) }
         .onTapGesture { edit.gallery = edit.gallery == kind ? nil : kind }
-        .help("Fai clic per scegliere la dimensione di \(kind.title), o trascinalo sullo schermo")
+        .help(tr("Fai clic per scegliere la dimensione di \(kind.title), o trascinalo sullo schermo", "Click to choose a size for \(kind.title), or drag it onto the screen"))
     }
 }
 
@@ -480,7 +480,7 @@ private struct SizeGallery: View {
                 Spacer()
                 Button { edit.gallery = nil } label: { Image(systemName: "xmark") }
                     .buttonStyle(.borderless)
-                    .help("Chiudi")
+                    .help(tr("Chiudi", "Close"))
             }
             HStack(alignment: .bottom, spacing: spacing) {
                 ForEach(WidgetSize.allCases) { size in
@@ -494,12 +494,12 @@ private struct SizeGallery: View {
                     .contentShape(Rectangle())
                     .onTapGesture { add(size) }
                     .onDrag { NSItemProvider(object: newPayload(kind, size)) }
-                    .help("Aggiungi \(kind.title) \(size.title.lowercased())")
+                    .help(tr("Aggiungi \(kind.title) \(size.title.lowercased())", "Add \(kind.title) in \(size.title.lowercased())"))
                 }
             }
             .scaleEffect(fit)
             .frame(width: total * fit, height: (m.size(.large).height + 30 / fit) * fit)
-            Text("Fai clic su una dimensione per aggiungerla al centro, o trascinala dove la vuoi")
+            Text(tr("Fai clic su una dimensione per aggiungerla al centro, o trascinala dove la vuoi", "Click a size to add it in the middle, or drag it where you want it"))
                 .font(.caption)
                 .opacity(0.65)
         }

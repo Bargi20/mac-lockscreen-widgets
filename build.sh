@@ -25,12 +25,23 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleVersion</key><string>1</string>
   <key>LSMinimumSystemVersion</key><string>15.0</string>
   <key>LSUIElement</key><true/>
-  <key>NSCalendarsFullAccessUsageDescription</key><string>Bacheca mostra il tuo prossimo evento sulla schermata di blocco.</string>
-  <key>NSRemindersFullAccessUsageDescription</key><string>Bacheca mostra i tuoi promemoria da fare sulla schermata di blocco.</string>
-  <key>NSAppleEventsUsageDescription</key><string>Bacheca legge il brano in riproduzione e il punto in cui sei, per mostrare musica e testi sincronizzati.</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleLocalizations</key><array><string>en</string><string>it</string></array>
+  <key>NSCalendarsFullAccessUsageDescription</key><string>Bacheca shows your next event on the lock screen.</string>
+  <key>NSRemindersFullAccessUsageDescription</key><string>Bacheca shows your open reminders on the lock screen.</string>
+  <key>NSAppleEventsUsageDescription</key><string>Bacheca reads the playing track and its position to show music and synced lyrics.</string>
 </dict>
 </plist>
 PLIST
 
+# Permission prompts in Italian; English comes from Info.plist above.
+mkdir -p "$APP/Contents/Resources/en.lproj" "$APP/Contents/Resources/it.lproj"
+touch "$APP/Contents/Resources/en.lproj/InfoPlist.strings"
+cat > "$APP/Contents/Resources/it.lproj/InfoPlist.strings" <<'STRINGS'
+"NSCalendarsFullAccessUsageDescription" = "Bacheca mostra il tuo prossimo evento sulla schermata di blocco.";
+"NSRemindersFullAccessUsageDescription" = "Bacheca mostra i tuoi promemoria da fare sulla schermata di blocco.";
+"NSAppleEventsUsageDescription" = "Bacheca legge il brano in riproduzione e il punto in cui sei, per mostrare musica e testi sincronizzati.";
+STRINGS
+
 codesign --force --sign - "$APP"
-echo "Creata $APP"
+echo "Built $APP"

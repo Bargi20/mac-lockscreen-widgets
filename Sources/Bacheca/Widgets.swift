@@ -196,16 +196,16 @@ private struct WidgetContent: View {
         case .battery:
             if let level = battery.level {
                 Gauge(size: sz, m: m, progress: level, symbol: battery.charging ? "bolt.fill" : "battery.100",
-                      value: "\(Int((level * 100).rounded()))%", label: "Batteria",
-                      detail: battery.charging ? "In carica" : level < 0.2 ? "Batteria scarica" : "Con batteria")
+                      value: "\(Int((level * 100).rounded()))%", label: tr("Batteria", "Battery"),
+                      detail: battery.charging ? tr("In carica", "Charging") : level < 0.2 ? tr("Batteria scarica", "Low battery") : tr("Con batteria", "On battery"))
             } else {
-                Gauge(size: sz, m: m, progress: 1, symbol: "powerplug.fill", value: "—", label: "Batteria", detail: "Alimentato dalla rete")
+                Gauge(size: sz, m: m, progress: 1, symbol: "powerplug.fill", value: "—", label: tr("Batteria", "Battery"), detail: tr("Alimentato dalla rete", "On power adapter"))
             }
         case .dayProgress:
             let p = now.timeIntervalSince(Calendar.current.startOfDay(for: now)) / 86400
             let left = Int((1 - p) * 24 * 60)
-            Gauge(size: sz, m: m, progress: p, symbol: "sun.horizon.fill", value: "\(Int(p * 100))%", label: "Giornata",
-                  detail: "Mancano \(left / 60) h \(left % 60) min")
+            Gauge(size: sz, m: m, progress: p, symbol: "sun.horizon.fill", value: "\(Int(p * 100))%", label: tr("Giornata", "Day"),
+                  detail: tr("Mancano \(left / 60) h \(left % 60) min", "\(left / 60) h \(left % 60) min left"))
         case .moon:
             MoonWidget(size: sz, m: m, now: now)
         case .countdown:
@@ -269,7 +269,7 @@ private struct WeatherWidget: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     VStack(alignment: .leading, spacing: 8 * s) {
-                        Text("DETTAGLI").font(.system(size: 9 * s, weight: .bold)).opacity(0.6)
+                        Text(tr("DETTAGLI", "DETAILS")).font(.system(size: 9 * s, weight: .bold)).opacity(0.6)
                         stats(w, spacing: 9)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -279,7 +279,7 @@ private struct WeatherWidget: View {
         } else {
             VStack(spacing: 4 * s) {
                 Image(systemName: "cloud").font(.system(size: 20 * s))
-                Text(failed ? "Meteo non disponibile" : "Caricamento…").font(.system(size: 11 * s, weight: .semibold))
+                Text(failed ? tr("Meteo non disponibile", "Weather unavailable") : tr("Caricamento…", "Loading…")).font(.system(size: 11 * s, weight: .semibold))
             }
         }
     }
@@ -369,15 +369,22 @@ private struct TempRange: View {
 private let hm = Date.FormatStyle.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits)
 
 private func eventTime(_ e: CalendarService.Event) -> String {
-    let day = Calendar.current.isDateInToday(e.start) ? "" : "Domani "
+    let day = Calendar.current.isDateInToday(e.start) ? "" : tr("Domani ", "Tomorrow ")
     return "\(day)\(e.start.formatted(hm))–\(e.end.formatted(hm))"
 }
 
-private func italianCalendar() -> Calendar {
-    var cal = Calendar(identifier: .gregorian)
-    cal.locale = Locale(identifier: "it_IT")
-    cal.firstWeekday = 2
+/// The user's own calendar: first day of the week and weekday names follow the system.
+private func localCalendar() -> Calendar {
+    var cal = Calendar.current
+    cal.locale = .current
     return cal
+}
+
+/// One-letter weekday names, starting from the calendar's first day of the week.
+private func weekdayInitials(_ cal: Calendar) -> [String] {
+    let symbols = cal.veryShortStandaloneWeekdaySymbols
+    let first = cal.firstWeekday - 1
+    return Array(symbols[first...] + symbols[..<first])
 }
 
 private struct CalendarWidget: View {
@@ -394,7 +401,7 @@ private struct CalendarWidget: View {
                 weekday
                 Text(now, format: .dateTime.day()).font(.system(size: 40 * s, weight: .light))
                 Spacer(minLength: 0)
-                Text(events.first.map { "\($0.start.formatted(hm)) \($0.title)" } ?? "Nessun evento")
+                Text(events.first.map { "\($0.start.formatted(hm)) \($0.title)" } ?? tr("Nessun evento", "No events"))
                     .font(.system(size: 10 * s, weight: .semibold)).lineLimit(2).opacity(0.8)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -442,11 +449,11 @@ private struct WeekStrip: View {
     let now: Date
     let s: Double
     var body: some View {
-        let cal = italianCalendar()
+        let cal = localCalendar()
         let start = cal.dateInterval(of: .weekOfYear, for: now)?.start ?? now
         let days = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
         HStack(spacing: 1 * s) {
-            ForEach(Array(zip(["L", "M", "M", "G", "V", "S", "D"], days).enumerated()), id: \.offset) { _, pair in
+            ForEach(Array(zip(weekdayInitials(cal), days).enumerated()), id: \.offset) { _, pair in
                 let today = cal.isDate(pair.1, inSameDayAs: now)
                 VStack(spacing: 4 * s) {
                     Text(pair.0).font(.system(size: 8 * s, weight: .bold)).opacity(0.55)
@@ -467,7 +474,7 @@ private struct MonthGrid: View {
     let s: Double
 
     var body: some View {
-        let cal = italianCalendar()
+        let cal = localCalendar()
         let start = cal.date(from: cal.dateComponents([.year, .month], from: now))!
         let days = cal.range(of: .day, in: .month, for: start)!.count
         let lead = (cal.component(.weekday, from: start) - cal.firstWeekday + 7) % 7
@@ -479,7 +486,7 @@ private struct MonthGrid: View {
             Text(now, format: .dateTime.month(.wide).year())
                 .font(.system(size: 10 * s, weight: .bold)).textCase(.uppercase).foregroundStyle(.red)
             LazyVGrid(columns: columns, spacing: 3 * s) {
-                ForEach(Array(["L", "M", "M", "G", "V", "S", "D"].enumerated()), id: \.offset) { _, d in
+                ForEach(Array(weekdayInitials(cal).enumerated()), id: \.offset) { _, d in
                     Text(d).font(.system(size: 8 * s, weight: .bold)).opacity(0.55)
                 }
                 ForEach(Array(cells.enumerated()), id: \.offset) { _, day in
@@ -508,12 +515,12 @@ private struct EventsWidget: View {
     var body: some View {
         let s = m.s
         VStack(alignment: .leading, spacing: 4 * s) {
-            Label("Prossimi eventi", systemImage: "calendar")
+            Label(tr("Prossimi eventi", "Up Next"), systemImage: "calendar")
                 .font(.system(size: 10 * s, weight: .bold)).textCase(.uppercase).opacity(0.75).lineLimit(1)
             if !access {
-                Text("Consenti l'accesso dalle impostazioni").font(.system(size: 12 * s, weight: .semibold))
+                Text(tr("Consenti l'accesso dalle impostazioni", "Allow access in Settings")).font(.system(size: 12 * s, weight: .semibold))
             } else if events.isEmpty {
-                Text("Niente in agenda").font(.system(size: 14 * s, weight: .bold))
+                Text(tr("Niente in agenda", "Nothing scheduled")).font(.system(size: 14 * s, weight: .bold))
             } else if size == .small {
                 let e = events[0]
                 Text(e.start.formatted(hm)).font(.system(size: 22 * s, weight: .light))
@@ -557,19 +564,19 @@ private struct RemindersWidget: View {
                 Image(systemName: "checklist").font(.system(size: 16 * s, weight: .semibold))
                 Spacer(minLength: 0)
                 Text(access ? "\(reminders.count)" : "—").font(.system(size: 30 * s, weight: .light))
-                Text(access ? (reminders.first?.title ?? "Tutto fatto") : "Consenti l'accesso")
+                Text(access ? (reminders.first?.title ?? tr("Tutto fatto", "All done")) : tr("Consenti l'accesso", "Allow access"))
                     .font(.system(size: 10.5 * s, weight: .semibold)).lineLimit(2).opacity(0.85)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(12 * s)
         } else {
             VStack(alignment: .leading, spacing: 4 * s) {
-                Label("Promemoria", systemImage: "checklist")
+                Label(tr("Promemoria", "Reminders"), systemImage: "checklist")
                     .font(.system(size: 10 * s, weight: .bold)).textCase(.uppercase).opacity(0.75)
                 if !access {
-                    Text("Consenti l'accesso dalle impostazioni").font(.system(size: 12 * s, weight: .semibold))
+                    Text(tr("Consenti l'accesso dalle impostazioni", "Allow access in Settings")).font(.system(size: 12 * s, weight: .semibold))
                 } else if reminders.isEmpty {
-                    Text("Tutto fatto").font(.system(size: 14 * s, weight: .bold))
+                    Text(tr("Tutto fatto", "All done")).font(.system(size: 14 * s, weight: .bold))
                 } else {
                     let limit = size == .medium ? 2 : size == .large ? 6 : 8
                     let columns = size == .wide ? 2 : 1
@@ -586,7 +593,7 @@ private struct RemindersWidget: View {
                         }
                     }
                     if reminders.count > limit {
-                        Text("altri \(reminders.count - limit)").font(.system(size: 10 * s, weight: .medium)).opacity(0.65)
+                        Text(tr("altri \(reminders.count - limit)", "\(reminders.count - limit) more")).font(.system(size: 10 * s, weight: .medium)).opacity(0.65)
                     }
                 }
             }
@@ -678,16 +685,17 @@ private struct MoonWidget: View {
             VStack(spacing: 10 * s) {
                 MoonView(phase: p).frame(width: 110 * s, height: 110 * s)
                 Text(moonName(p)).font(.system(size: 14 * s, weight: .semibold))
-                Text("Illuminata al \(lit)%").font(.system(size: 10.5 * s, weight: .medium)).opacity(0.75)
+                Text(tr("Illuminata al \(lit)%", "\(lit)% illuminated")).font(.system(size: 10.5 * s, weight: .medium)).opacity(0.75)
             }
         case .medium, .wide:
             HStack(spacing: 16 * s) {
                 MoonView(phase: p).frame(width: (size == .wide ? 150 : 64) * s, height: (size == .wide ? 150 : 64) * s)
                 VStack(alignment: .leading, spacing: 3 * s) {
-                    Text("LUNA").font(.system(size: 10 * s, weight: .bold)).opacity(0.7)
+                    Text(tr("LUNA", "MOON")).font(.system(size: 10 * s, weight: .bold)).opacity(0.7)
                     Text(moonName(p)).font(.system(size: (size == .wide ? 22 : 15) * s, weight: .semibold))
-                    Text("Illuminata al \(lit)%").font(.system(size: 10.5 * s, weight: .medium)).opacity(0.8)
-                    Text(toFull == 0 ? "Luna piena oggi" : "Luna piena tra \(toFull) giorni")
+                    Text(tr("Illuminata al \(lit)%", "\(lit)% illuminated")).font(.system(size: 10.5 * s, weight: .medium)).opacity(0.8)
+                    Text(toFull == 0 ? tr("Luna piena oggi", "Full moon today")
+                                     : tr("Luna piena tra \(toFull) giorni", "Full moon in \(toFull) days"))
                         .font(.system(size: 10.5 * s, weight: .medium)).opacity(0.65)
                 }
                 Spacer(minLength: 0)
@@ -708,7 +716,7 @@ private struct CountdownWidget: View {
         let s = m.s
         let cal = Calendar.current
         let days = cal.dateComponents([.day], from: cal.startOfDay(for: now), to: cal.startOfDay(for: date)).day ?? 0
-        let unit = days < 0 ? "giorni fa" : days == 1 ? "giorno" : "giorni"
+        let unit = days < 0 ? tr("giorni fa", "days ago") : days == 1 ? tr("giorno", "day") : tr("giorni", "days")
         let dateText = date.formatted(.dateTime.weekday(.abbreviated).day().month(.wide))
         switch size {
         case .small:
@@ -763,7 +771,7 @@ private struct NowPlayingWidget: View {
                     Artwork(image: music.artwork, side: size.width, corner: 0)
                     LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .center, endPoint: .bottom)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(music.title ?? "Niente in riproduzione").font(.system(size: 11 * s, weight: .bold)).lineLimit(1)
+                        Text(music.title ?? tr("Niente in riproduzione", "Nothing playing")).font(.system(size: 11 * s, weight: .bold)).lineLimit(1)
                         Text(music.artist ?? "").font(.system(size: 9 * s, weight: .semibold)).opacity(0.8).lineLimit(1)
                     }
                     .foregroundStyle(.white)
@@ -786,7 +794,8 @@ private struct NowPlayingWidget: View {
                         trackInfo(titleSize: wide ? 17 : 13, artistSize: wide ? 11 : 9.5)
                         progress(at: ctx.date, times: wide).padding(.top, (wide ? 10 : 4) * s)
                         if wide, music.title != nil {
-                            Text(music.isPlaying ? "In riproduzione su \(music.source)" : "In pausa · \(music.source)")
+                            Text(music.isPlaying ? tr("In riproduzione su \(music.source)", "Playing on \(music.source)")
+                                                 : tr("In pausa · \(music.source)", "Paused · \(music.source)"))
                                 .font(.system(size: 10 * s, weight: .medium)).opacity(0.6).padding(.top, 6 * s)
                         }
                     }
@@ -811,8 +820,8 @@ private struct NowPlayingWidget: View {
             Text(music.artist ?? "").textCase(.uppercase)
                 .font(.system(size: artistSize * s, weight: .semibold)).opacity(0.7).lineLimit(1)
         } else {
-            Text("Niente in riproduzione").font(.system(size: 14 * s, weight: .bold))
-            Text("Musica o Spotify").font(.system(size: 11 * s)).opacity(0.7)
+            Text(tr("Niente in riproduzione", "Nothing playing")).font(.system(size: 14 * s, weight: .bold))
+            Text(tr("Musica o Spotify", "Music or Spotify")).font(.system(size: 11 * s)).opacity(0.7)
         }
     }
 
@@ -894,14 +903,14 @@ private struct LyricsWidget: View {
                 }
                 switch (music.title == nil, lyrics.state) {
                 case (true, _):
-                    Text(item.bare ? "" : "Niente in riproduzione").font(.system(size: 14 * s, weight: .bold))
+                    Text(item.bare ? "" : tr("Niente in riproduzione", "Nothing playing")).font(.system(size: 14 * s, weight: .bold))
                 case (_, .loading), (_, .idle):
-                    Text("Cerco il testo…").font(.system(size: 14 * s, weight: .bold)).opacity(0.8)
+                    Text(tr("Cerco il testo…", "Finding lyrics…")).font(.system(size: 14 * s, weight: .bold)).opacity(0.8)
                 case (_, .missing):
-                    Text(item.bare ? "" : "Testo non trovato").font(.system(size: 14 * s, weight: .bold)).opacity(0.8)
+                    Text(item.bare ? "" : tr("Testo non trovato", "No lyrics found")).font(.system(size: 14 * s, weight: .bold)).opacity(0.8)
                 case (_, .plain):
                     Text(lyrics.lines.first?.text ?? "").font(.system(size: 14 * s, weight: .bold)).lineLimit(2)
-                    Text("Testo non sincronizzato").font(.system(size: 10 * s, weight: .medium)).opacity(0.6)
+                    Text(tr("Testo non sincronizzato", "Lyrics not synced")).font(.system(size: 10 * s, weight: .medium)).opacity(0.6)
                 case (_, .synced):
                     ForEach(Array(window.enumerated()), id: \.offset) { _, line in
                         Text(line.current && line.text.trimmingCharacters(in: .whitespaces).isEmpty ? "♪" : line.text)
@@ -920,7 +929,7 @@ private struct LyricsWidget: View {
     }
 
     private var header: String {
-        guard let t = music.title else { return "Testo" }
+        guard let t = music.title else { return tr("Testo", "Lyrics") }
         if let a = music.artist, !a.isEmpty { return "\(t) · \(a)" }
         return t
     }
@@ -961,7 +970,7 @@ private struct ClockWidget: View {
                     ClockFace(date: ctx.date, timeZone: timeZone, seconds: true)
                         .frame(width: (size == .wide ? 160 : 62) * s, height: (size == .wide ? 160 : 62) * s)
                     VStack(alignment: .leading, spacing: 2 * s) {
-                        Text((title ?? "Ora locale").uppercased()).font(.system(size: 10 * s, weight: .bold)).opacity(0.7).lineLimit(1)
+                        Text((title ?? tr("Ora locale", "Local time")).uppercased()).font(.system(size: 10 * s, weight: .bold)).opacity(0.7).lineLimit(1)
                         Text(ctx.date, format: digital).font(.system(size: (size == .wide ? 52 : 26) * s, weight: .light))
                             .lineLimit(1).minimumScaleFactor(0.6)
                         Text(title == nil ? ctx.date.formatted(.dateTime.weekday(.wide).day().month(.wide)) : offsetText(timeZone, now: ctx.date))
@@ -1034,7 +1043,7 @@ private struct PhotoWidget: View {
         if files.isEmpty {
             VStack(spacing: 4 * m.s) {
                 Image(systemName: "photo.on.rectangle").font(.system(size: 18 * m.s))
-                Text("Nessuna foto nella cartella").font(.system(size: 11 * m.s, weight: .semibold)).multilineTextAlignment(.center)
+                Text(tr("Nessuna foto nella cartella", "No photos in this folder")).font(.system(size: 11 * m.s, weight: .semibold)).multilineTextAlignment(.center)
             }
             .padding(8 * m.s)
         } else {
@@ -1109,13 +1118,13 @@ func moonPhase(_ d: Date) -> Double {
 }
 
 func moonName(_ p: Double) -> String {
-    ["Luna nuova", "Falce crescente", "Primo quarto", "Gibbosa crescente",
-     "Luna piena", "Gibbosa calante", "Ultimo quarto", "Falce calante"][Int(p * 8 + 0.5) % 8]
+    [tr("Luna nuova", "New Moon"), tr("Falce crescente", "Waxing Crescent"), tr("Primo quarto", "First Quarter"), tr("Gibbosa crescente", "Waxing Gibbous"),
+     tr("Luna piena", "Full Moon"), tr("Gibbosa calante", "Waning Gibbous"), tr("Ultimo quarto", "Last Quarter"), tr("Falce calante", "Waning Crescent")][Int(p * 8 + 0.5) % 8]
 }
 
 let worldCities: [(tz: String, name: String)] = [
-    ("Europe/Rome", "Roma"), ("Europe/London", "Londra"), ("America/New_York", "New York"),
-    ("America/Los_Angeles", "Los Angeles"), ("America/Sao_Paulo", "San Paolo"), ("Asia/Dubai", "Dubai"),
+    ("Europe/Rome", tr("Roma", "Rome")), ("Europe/London", tr("Londra", "London")), ("America/New_York", "New York"),
+    ("America/Los_Angeles", "Los Angeles"), ("America/Sao_Paulo", tr("San Paolo", "São Paulo")), ("Asia/Dubai", "Dubai"),
     ("Asia/Tokyo", "Tokyo"), ("Australia/Sydney", "Sydney"),
 ]
 
@@ -1125,8 +1134,8 @@ func cityName(_ tz: String) -> String {
 
 func offsetText(_ tz: TimeZone, now: Date) -> String {
     let diff = tz.secondsFromGMT(for: now) - TimeZone.current.secondsFromGMT(for: now)
-    if diff == 0 { return "stessa ora" }
+    if diff == 0 { return tr("stessa ora", "same time") }
     let h = Double(diff) / 3600
-    let v = h == h.rounded() ? String(Int(abs(h))) : String(format: "%.1f", abs(h)).replacingOccurrences(of: ".", with: ",")
+    let v = h == h.rounded() ? String(Int(abs(h))) : abs(h).formatted(.number.precision(.fractionLength(1)))
     return (diff > 0 ? "+" : "−") + v + " h"
 }

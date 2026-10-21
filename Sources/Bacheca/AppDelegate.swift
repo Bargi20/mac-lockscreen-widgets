@@ -62,10 +62,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(systemSymbolName: "lock.rectangle.stack", accessibilityDescription: "Bacheca")
         let menu = NSMenu()
-        menu.addItem(withTitle: "Disponi i widget…", action: #selector(showPreview), keyEquivalent: "p").target = self
-        menu.addItem(withTitle: "Impostazioni…", action: #selector(openSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: tr("Disponi i widget…", "Arrange Widgets…"), action: #selector(showPreview), keyEquivalent: "p").target = self
+        menu.addItem(withTitle: tr("Impostazioni…", "Settings…"), action: #selector(openSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Esci da Bacheca", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: tr("Esci da Bacheca", "Quit Bacheca"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
     }
 

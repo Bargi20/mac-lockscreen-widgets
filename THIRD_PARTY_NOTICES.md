@@ -1,9 +1,9 @@
-# Componenti e servizi di terze parti
+# Third-party components and services
 
 ## SkyLightWindow
 
-`Sources/Bacheca/SkyLight.swift` riprende la tecnica e la sequenza di chiamate SkyLight di
-[SkyLightWindow](https://github.com/Lakr233/SkyLightWindow), distribuito con la licenza seguente.
+`Sources/Bacheca/SkyLight.swift` adapts the technique and the SkyLight call sequence from
+[SkyLightWindow](https://github.com/Lakr233/SkyLightWindow), distributed under the following license.
 
 ```
 MIT License
@@ -29,12 +29,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Servizi usati mentre l'app è in esecuzione
+## Services used while the app runs
 
-Nessun dato di questi servizi è incluso nel repository: l'app li scarica quando servono.
+No data from these services is included in the repository: the app fetches it when needed.
 
-- **[Open-Meteo](https://open-meteo.com)**: dati meteo e ricerca delle città, con licenza
-  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). L'API gratuita è riservata all'uso
-  non commerciale; un uso commerciale richiede un piano a pagamento.
-- **[LRCLIB](https://lrclib.net)**: testi delle canzoni sincronizzati. I testi restano dei
-  rispettivi autori ed editori.
+- **[Open-Meteo](https://open-meteo.com)**: weather data and city search, licensed under
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The free API is for non-commercial
+  use only; commercial use needs a paid plan.
+- **[LRCLIB](https://lrclib.net)**: synced song lyrics. Lyrics remain the property of their
+  authors and publishers.

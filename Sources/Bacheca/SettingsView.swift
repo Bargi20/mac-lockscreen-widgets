@@ -19,14 +19,16 @@ struct SettingsView: View {
             Section {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("I widget compaiono quando blocchi il Mac e spariscono quando accedi.")
-                        Text("Blocca con ⌃⌘Q per provarli.").foregroundStyle(.secondary)
+                        Text(tr("I widget compaiono quando blocchi il Mac e spariscono quando accedi.", "Widgets appear when you lock your Mac and go away when you log in."))
+                        Text(tr("Blocca con ⌃⌘Q per provarli.", "Lock with ⌃⌘Q to try them.")).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button("Disponi i widget…", action: onPreview).buttonStyle(.borderedProminent)
+                    Button(tr("Disponi i widget…", "Arrange Widgets…"), action: onPreview).buttonStyle(.borderedProminent)
                 }
                 if SkyLight.shared == nil {
-                    Label("Questa versione di macOS non permette di disegnare sopra la schermata di blocco. Lo studio funziona comunque.", systemImage: "exclamationmark.triangle")
+                    Label(tr("Questa versione di macOS non permette di disegnare sopra la schermata di blocco. Lo studio funziona comunque.",
+                             "This version of macOS doesn’t allow drawing over the lock screen. The studio still works."),
+                          systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.orange)
                 }
             }
@@ -37,65 +39,65 @@ struct SettingsView: View {
                 }
             } header: {
                 HStack {
-                    Text("Widget · \(store.config.items.count) di \(Config.maxItems)")
+                    Text(tr("Widget · \(store.config.items.count) di \(Config.maxItems)", "Widgets · \(store.config.items.count) of \(Config.maxItems)"))
                     Spacer()
                     Menu {
                         ForEach(WidgetKind.allCases) { kind in
                             Button { store.add(kind) } label: { Label(kind.title, systemImage: kind.symbol) }
                         }
                     } label: {
-                        Label("Aggiungi", systemImage: "plus")
+                        Label(tr("Aggiungi", "Add"), systemImage: "plus")
                     }
                     .disabled(!store.config.canAddMore)
                     .fixedSize()
                 }
             } footer: {
-                Text("La posizione si sceglie trascinando i widget in “Disponi i widget…”.").foregroundStyle(.secondary)
+                Text(tr("La posizione si sceglie trascinando i widget in “Disponi i widget…”.", "Choose positions by dragging widgets in “Arrange Widgets…”.")).foregroundStyle(.secondary)
             }
 
-            Section("Aspetto") {
-                Slider(value: $store.config.scale, in: 0.7...1.5) { Text("Dimensione") }
-                Picker("Stile dei riquadri", selection: $store.config.style) {
+            Section(tr("Aspetto", "Appearance")) {
+                Slider(value: $store.config.scale, in: 0.7...1.5) { Text(tr("Dimensione", "Size")) }
+                Picker(tr("Stile dei riquadri", "Card style"), selection: $store.config.style) {
                     ForEach(CardStyle.allCases) { Text($0.title).tag($0) }
                 }
                 if store.config.style.usesAccent {
-                    ColorPicker("Colore", selection: Binding(
+                    ColorPicker(tr("Colore", "Color"), selection: Binding(
                         get: { store.config.accent.color },
                         set: { store.config.accent = RGBA($0) }), supportsOpacity: false)
                 }
-                Picker("Carattere", selection: $store.config.fontStyle) {
+                Picker(tr("Carattere", "Font"), selection: $store.config.fontStyle) {
                     ForEach(FontStyle.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
             }
 
-            Section("Meteo") {
+            Section(tr("Meteo", "Weather")) {
                 HStack {
-                    TextField("Città", text: $cityQuery, prompt: Text(store.config.weatherCity))
+                    TextField(tr("Città", "City"), text: $cityQuery, prompt: Text(store.config.weatherCity))
                         .onSubmit(searchCity)
-                    Button(searching ? "Cerco…" : "Imposta", action: searchCity)
+                    Button(searching ? tr("Cerco…", "Searching…") : tr("Imposta", "Set"), action: searchCity)
                         .disabled(searching || cityQuery.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
                 if let cityError { Text(cityError).foregroundStyle(.red) }
-                Text("Dati da Open-Meteo, aggiornati ogni 15 minuti.").foregroundStyle(.secondary)
+                Text(tr("Dati da Open-Meteo, aggiornati ogni 15 minuti.", "Data from Open-Meteo, updated every 15 minutes.")).foregroundStyle(.secondary)
             }
 
-            Section("Permessi") {
-                PermissionRow(title: "Calendario", granted: calendar.hasAccess) {
+            Section(tr("Permessi", "Permissions")) {
+                PermissionRow(title: tr("Calendario", "Calendar"), granted: calendar.hasAccess) {
                     Task { await calendar.requestAccess() }
                 }
-                PermissionRow(title: "Promemoria", granted: calendar.hasRemindersAccess) {
+                PermissionRow(title: tr("Promemoria", "Reminders"), granted: calendar.hasRemindersAccess) {
                     Task { await calendar.requestRemindersAccess() }
                 }
-                Text("Per musica e testi, macOS chiede una volta di poter controllare Musica o Spotify: serve a leggere brano, copertina e punto della riproduzione. I testi arrivano da LRCLIB.")
+                Text(tr("Per musica e testi, macOS chiede una volta di poter controllare Musica o Spotify: serve a leggere brano, copertina e punto della riproduzione. I testi arrivano da LRCLIB.", "For music and lyrics, macOS asks once to let Bacheca control Music or Spotify: it reads the track, artwork and playback position. Lyrics come from LRCLIB."))
                     .foregroundStyle(.secondary)
             }
 
-            Section("Generale") {
-                Toggle("Apri al login", isOn: $launchAtLogin)
+            Section(tr("Generale", "General")) {
+                Toggle(tr("Apri al login", "Open at login"), isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, on in setLaunchAtLogin(on) }
                 if let loginError { Text(loginError).foregroundStyle(.red) }
-                Text("Bacheca deve restare aperta (icona nella barra dei menu) perché i widget compaiano.")
+                Text(tr("Bacheca deve restare aperta (icona nella barra dei menu) perché i widget compaiano.", "Bacheca must stay open (menu bar icon) for widgets to appear."))
                     .foregroundStyle(.secondary)
             }
         }
@@ -116,7 +118,7 @@ struct SettingsView: View {
                 cityQuery = ""
                 await weather.refresh(latitude: place.latitude, longitude: place.longitude)
             } else {
-                cityError = "Non trovo “\(q)”. Prova con il nome in italiano o in inglese."
+                cityError = tr("Non trovo “\(q)”. Prova con il nome in italiano o in inglese.", "Can’t find “\(q)”. Try the city’s English or local name.")
             }
             searching = false
         }
@@ -127,7 +129,7 @@ struct SettingsView: View {
             if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             loginError = nil
         } catch {
-            loginError = "Non riesco a cambiare l'apertura al login: \(error.localizedDescription)"
+            loginError = tr("Non riesco a cambiare l'apertura al login: \(error.localizedDescription)", "Couldn’t change Open at Login: \(error.localizedDescription)")
             launchAtLogin = SMAppService.mainApp.status == .enabled
         }
     }
@@ -143,9 +145,9 @@ private struct PermissionRow: View {
             Text(title)
             Spacer()
             if granted {
-                Label("Consentito", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                Label(tr("Consentito", "Allowed"), systemImage: "checkmark.circle.fill").foregroundStyle(.green)
             } else {
-                Button("Consenti accesso", action: request)
+                Button(tr("Consenti accesso", "Allow access"), action: request)
             }
         }
     }
@@ -162,38 +164,38 @@ private struct ItemRow: View {
                 Text(item.kind.title).fontWeight(.medium)
                 HStack {
                     if item.kind.sizes.count > 1 {
-                        Picker("Dimensione", selection: $item.size) {
+                        Picker(tr("Dimensione", "Size"), selection: $item.size) {
                             ForEach(item.kind.sizes) { Text($0.title).tag($0) }
                         }
                         .labelsHidden().fixedSize()
                     }
                     if item.kind != .note && item.kind != .photo {
-                        Toggle("Senza riquadro", isOn: $item.bare)
+                        Toggle(tr("Senza riquadro", "No card"), isOn: $item.bare)
                     }
                     if item.kind == .note {
-                        ColorPicker("Colore", selection: Binding(get: { item.color.color }, set: { item.color = RGBA($0) }), supportsOpacity: false)
+                        ColorPicker(tr("Colore", "Color"), selection: Binding(get: { item.color.color }, set: { item.color = RGBA($0) }), supportsOpacity: false)
                     }
                 }
                 switch item.kind {
                 case .worldClock:
-                    Picker("Città", selection: $item.timeZone) {
+                    Picker(tr("Città", "City"), selection: $item.timeZone) {
                         ForEach(worldCities, id: \.tz) { Text($0.name).tag($0.tz) }
                     }
                     .labelsHidden().frame(maxWidth: 180)
                 case .countdown:
                     HStack {
-                        TextField("Nome", text: $item.label).frame(maxWidth: 160)
-                        DatePicker("Data", selection: $item.date, displayedComponents: .date).labelsHidden()
+                        TextField(tr("Nome", "Name"), text: $item.label).frame(maxWidth: 160)
+                        DatePicker(tr("Data", "Date"), selection: $item.date, displayedComponents: .date).labelsHidden()
                     }
                 case .note:
-                    TextField("Testo della nota", text: $item.text, axis: .vertical).lineLimit(2...6)
+                    TextField(tr("Testo della nota", "Note text"), text: $item.text, axis: .vertical).lineLimit(2...6)
                 case .photo:
                     HStack {
-                        Button("Scegli cartella…", action: chooseFolder)
+                        Button(tr("Scegli cartella…", "Choose Folder…"), action: chooseFolder)
                         Text(URL(fileURLWithPath: item.folderPath).lastPathComponent)
                             .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                     }
-                    Picker("Cambia foto ogni", selection: $item.photoMinutes) {
+                    Picker(tr("Cambia foto ogni", "Change photo every"), selection: $item.photoMinutes) {
                         ForEach([1, 5, 10, 30, 60], id: \.self) { Text("\($0) min").tag($0) }
                     }
                     .frame(maxWidth: 220)
@@ -204,7 +206,7 @@ private struct ItemRow: View {
             Spacer()
             Button(role: .destructive) { remove(item.id) } label: { Image(systemName: "trash") }
                 .buttonStyle(.borderless)
-                .help("Rimuovi")
+                .help(tr("Rimuovi", "Remove"))
         }
         .padding(.vertical, 2)
     }
@@ -214,7 +216,7 @@ private struct ItemRow: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Usa questa cartella"
+        panel.prompt = tr("Usa questa cartella", "Use This Folder")
         panel.directoryURL = URL(fileURLWithPath: item.folderPath)
         if panel.runModal() == .OK, let url = panel.url {
             item.folderPath = url.path
