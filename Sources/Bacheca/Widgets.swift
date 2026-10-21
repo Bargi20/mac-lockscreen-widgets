@@ -68,6 +68,27 @@ struct PreviewBackdrop: View {
 
 // MARK: - Card chrome
 
+/// Apple system colors, dark-appearance variants.
+enum SystemColor {
+    static let green = Color(red: 0x30 / 255, green: 0xD1 / 255, blue: 0x58 / 255)
+    static let red = Color(red: 0xFF / 255, green: 0x45 / 255, blue: 0x3A / 255)
+    static let orange = Color(red: 0xFF / 255, green: 0x9F / 255, blue: 0x0A / 255)
+    static let yellow = Color(red: 0xFF / 255, green: 0xD6 / 255, blue: 0x0A / 255)
+    static let pink = Color(red: 0xFF / 255, green: 0x37 / 255, blue: 0x5F / 255)
+    static let teal = Color(red: 0x64 / 255, green: 0xD2 / 255, blue: 0xFF / 255)
+}
+
+/// The macOS edge: a 0.5 pt hairline instead of a visible border, and soft layered shadows.
+private struct MacEdge: ViewModifier {
+    let shape: RoundedRectangle
+    func body(content: Content) -> some View {
+        content
+            .overlay(shape.strokeBorder(.white.opacity(0.22), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.08), radius: 1, y: 1)
+            .shadow(color: .black.opacity(0.14), radius: 10, y: 5)
+    }
+}
+
 struct WidgetCard: View {
     let item: WidgetItem
     @EnvironmentObject var store: ConfigStore
@@ -141,13 +162,12 @@ private struct CardChrome: ViewModifier {
                     LinearGradient(colors: [item.color.color.opacity(0.92), item.color.color],
                                    startPoint: .topLeading, endPoint: .bottomTrailing),
                     in: shape)
-                .overlay(shape.strokeBorder(.white.opacity(0.2), lineWidth: 1))
-                .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
+                .modifier(MacEdge(shape: shape))
         } else if item.hasRetro && item.backdrop == .color {
             content
                 .clipShape(shape)
                 .background(item.backdropColor.color, in: shape)
-                .overlay(shape.strokeBorder(.white.opacity(0.15), lineWidth: 1))
+                .modifier(MacEdge(shape: shape))
         } else if item.hasRetro, item.backdrop == .wallpaper || item.backdrop == .image {
             content
                 .background {
@@ -160,8 +180,7 @@ private struct CardChrome: ViewModifier {
                     }
                 }
                 .clipShape(shape)
-                .overlay(shape.strokeBorder(.white.opacity(0.22), lineWidth: 1))
-                .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
+                .modifier(MacEdge(shape: shape))
         } else {
             content
                 .background {
@@ -171,6 +190,7 @@ private struct CardChrome: ViewModifier {
                 }
                 .clipShape(shape)
                 .modifier(CardBackground(style: style, accent: accent, shape: shape))
+                .modifier(MacEdge(shape: shape))
         }
     }
 }
@@ -179,8 +199,18 @@ private struct CardBackground: ViewModifier {
     let style: CardStyle
     let accent: Color
     let shape: RoundedRectangle
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func body(content: Content) -> some View {
+        if reduceTransparency && (style == .glass || style == .tinted) {
+            content.background(style == .tinted ? accent.opacity(0.85) : Color(white: 0.17), in: shape)
+        } else {
+            styled(content)
+        }
+    }
+
+    @ViewBuilder
+    private func styled(_ content: Content) -> some View {
         switch style {
         case .glass:
             // A light dark wash under the glass keeps white text legible on bright wallpapers.
@@ -198,7 +228,6 @@ private struct CardBackground: ViewModifier {
             content
                 .background(accent.opacity(0.5), in: shape)
                 .background(.ultraThinMaterial, in: shape)
-                .overlay(shape.strokeBorder(.white.opacity(0.18), lineWidth: 1))
         case .dark:
             content.background(Color.black.opacity(0.45), in: shape)
         case .light:
@@ -267,7 +296,7 @@ private struct WidgetContent: View {
                 Gauge(size: sz, m: m, progress: level, symbol: battery.charging ? "bolt.fill" : "battery.100",
                       value: "\(Int((level * 100).rounded()))%", label: tr("Batteria", "Battery"),
                       detail: battery.charging ? tr("In carica", "Charging") : level < 0.2 ? tr("Batteria scarica", "Low battery") : tr("Con batteria", "On battery"),
-                      tint: AnyShapeStyle(level < 0.2 && !battery.charging ? Color.red : Color.green))
+                      tint: AnyShapeStyle(level < 0.2 && !battery.charging ? SystemColor.red : SystemColor.green))
             } else {
                 Gauge(size: sz, m: m, progress: 1, symbol: "powerplug.fill", value: "—", label: tr("Batteria", "Battery"), detail: tr("Alimentato dalla rete", "On power adapter"))
             }
@@ -276,7 +305,7 @@ private struct WidgetContent: View {
             let left = Int((1 - p) * 24 * 60)
             Gauge(size: sz, m: m, progress: p, symbol: "sun.horizon.fill", value: "\(Int(p * 100))%", label: tr("Giornata", "Day"),
                   detail: tr("Mancano \(left / 60) h \(left % 60) min", "\(left / 60) h \(left % 60) min left"),
-                  tint: AnyShapeStyle(AngularGradient(colors: [.yellow, .orange, .pink], center: .center,
+                  tint: AnyShapeStyle(AngularGradient(colors: [SystemColor.yellow, SystemColor.orange, SystemColor.pink], center: .center,
                                                       startAngle: .degrees(0), endAngle: .degrees(360 * max(0.05, p)))))
         case .moon:
             MoonWidget(size: sz, m: m, now: now)
@@ -305,7 +334,7 @@ private struct WeatherWidget: View {
             case .small:
                 VStack(alignment: .leading, spacing: 2 * s) {
                     cityLabel
-                    Text("\(Int(w.temperature.rounded()))°").font(.system(size: 30 * s, weight: .light))
+                    Text("\(Int(w.temperature.rounded()))°").font(.system(size: 30 * s, weight: .regular)).tracking(-0.02 * 30 * s)
                     Spacer(minLength: 0)
                     Image(systemName: w.symbol).symbolRenderingMode(.multicolor).font(.system(size: 14 * s))
                     Text(highLow(w)).font(.system(size: 10 * s, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
@@ -316,7 +345,7 @@ private struct WeatherWidget: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2 * s) {
                         cityLabel
-                        Text("\(Int(w.temperature.rounded()))°").font(.system(size: 32 * s, weight: .light))
+                        Text("\(Int(w.temperature.rounded()))°").font(.system(size: 32 * s, weight: .regular)).tracking(-0.02 * 32 * s)
                         Text(w.label).font(.system(size: 10.5 * s, weight: .semibold)).lineLimit(1)
                         Text(highLow(w)).font(.system(size: 10.5 * s, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
                     }
@@ -372,7 +401,7 @@ private struct WeatherWidget: View {
         VStack(alignment: .leading, spacing: 3 * m.s) {
             cityLabel
             HStack(alignment: .top) {
-                Text("\(Int(w.temperature.rounded()))°").font(.system(size: temp * m.s, weight: .light))
+                Text("\(Int(w.temperature.rounded()))°").font(.system(size: temp * m.s, weight: .regular)).tracking(-0.02 * temp * m.s)
                 Spacer(minLength: 0)
                 Image(systemName: w.symbol).symbolRenderingMode(.multicolor).font(.system(size: 28 * m.s)).padding(.top, 4 * m.s)
             }
@@ -427,7 +456,7 @@ private struct TempRange: View {
             GeometryReader { geo in
                 let p = max > min ? (current - min) / (max - min) : 0.5
                 ZStack(alignment: .leading) {
-                    Capsule().fill(LinearGradient(colors: [.cyan.opacity(0.9), .yellow.opacity(0.9), .orange], startPoint: .leading, endPoint: .trailing))
+                    Capsule().fill(LinearGradient(colors: [SystemColor.teal, SystemColor.yellow, SystemColor.orange], startPoint: .leading, endPoint: .trailing))
                         .frame(height: 4 * s)
                     Circle().fill(.white).frame(width: 7 * s, height: 7 * s)
                         .offset(x: (geo.size.width - 7 * s) * Swift.min(1, Swift.max(0, p)))
@@ -477,7 +506,7 @@ private struct CalendarWidget: View {
         case .small:
             VStack(alignment: .leading, spacing: 0) {
                 weekday
-                Text(now, format: .dateTime.day()).font(.system(size: 40 * s, weight: .light))
+                Text(now, format: .dateTime.day()).font(.system(size: 40 * s, weight: .regular)).tracking(-0.02 * 40 * s)
                 Spacer(minLength: 0)
                 Text(events.first.map { "\($0.start.formatted(hm)) \($0.title)" } ?? tr("Nessun evento", "No events"))
                     .font(.system(size: 10 * s, weight: .semibold)).lineLimit(2).opacity(0.8)
@@ -488,8 +517,8 @@ private struct CalendarWidget: View {
             HStack(spacing: 8 * s) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(now, format: .dateTime.weekday(.abbreviated)).textCase(.uppercase)
-                        .font(.system(size: 10 * s, weight: .bold)).foregroundStyle(.red)
-                    Text(now, format: .dateTime.day()).font(.system(size: 34 * s, weight: .light))
+                        .font(.system(size: 10 * s, weight: .bold)).foregroundStyle(SystemColor.red)
+                    Text(now, format: .dateTime.day()).font(.system(size: 34 * s, weight: .regular)).tracking(-0.02 * 34 * s)
                         .lineLimit(1).minimumScaleFactor(0.6)
                 }
                 .fixedSize()
@@ -502,7 +531,7 @@ private struct CalendarWidget: View {
             HStack(alignment: .top, spacing: 16 * s) {
                 VStack(alignment: .leading, spacing: 0) {
                     weekday
-                    Text(now, format: .dateTime.day()).font(.system(size: 54 * s, weight: .light))
+                    Text(now, format: .dateTime.day()).font(.system(size: 54 * s, weight: .regular)).tracking(-0.02 * 54 * s)
                     Text(now, format: .dateTime.month(.wide).year()).font(.system(size: 11 * s, weight: .semibold)).opacity(0.75)
                     Spacer(minLength: 0)
                     if let e = events.first {
@@ -519,7 +548,7 @@ private struct CalendarWidget: View {
 
     private var weekday: some View {
         Text(now, format: .dateTime.weekday(.wide)).textCase(.uppercase)
-            .font(.system(size: 10 * m.s, weight: .bold)).foregroundStyle(.red)
+            .font(.system(size: 10 * m.s, weight: .bold)).foregroundStyle(SystemColor.red)
     }
 }
 
@@ -538,7 +567,7 @@ private struct WeekStrip: View {
                     Text("\(cal.component(.day, from: pair.1))")
                         .font(.system(size: 10 * s, weight: today ? .bold : .medium))
                         .frame(width: 16 * s, height: 16 * s)
-                        .background(today ? Circle().fill(.red) : nil)
+                        .background(today ? Circle().fill(SystemColor.red) : nil)
                         .foregroundStyle(today ? .white : .primary)
                 }
             }
@@ -563,7 +592,7 @@ private struct MonthGrid: View {
 
         VStack(alignment: .leading, spacing: 4 * s) {
             Text(now, format: .dateTime.month(.wide).year())
-                .font(.system(size: 10 * s, weight: .bold)).textCase(.uppercase).foregroundStyle(.red)
+                .font(.system(size: 10 * s, weight: .bold)).textCase(.uppercase).foregroundStyle(SystemColor.red)
             LazyVGrid(columns: columns, spacing: 3 * s) {
                 ForEach(Array(weekdayInitials(cal).enumerated()), id: \.offset) { _, d in
                     Text(d).font(.system(size: 8 * s, weight: .bold)).opacity(0.55)
@@ -573,7 +602,7 @@ private struct MonthGrid: View {
                         Text("\(day)")
                             .font(.system(size: cell * 0.56 * s, weight: day == today ? .bold : .medium))
                             .frame(width: cell * s, height: cell * s)
-                            .background(day == today ? Circle().fill(.red) : nil)
+                            .background(day == today ? Circle().fill(SystemColor.red) : nil)
                             .foregroundStyle(day == today ? .white : .primary)
                     } else {
                         Color.clear.frame(height: cell * s)
@@ -602,7 +631,7 @@ private struct EventsWidget: View {
                 Text(tr("Niente in agenda", "Nothing scheduled")).font(.system(size: 14 * s, weight: .bold))
             } else if size == .small {
                 let e = events[0]
-                Text(e.start.formatted(hm)).font(.system(size: 22 * s, weight: .light))
+                Text(e.start.formatted(hm)).font(.system(size: 22 * s, weight: .regular)).tracking(-0.02 * 22 * s)
                 Text(e.title).font(.system(size: 13 * s, weight: .bold)).lineLimit(3)
             } else {
                 let limit = size == .medium ? 1 : 3
@@ -610,7 +639,7 @@ private struct EventsWidget: View {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .topLeading), count: columns), alignment: .leading, spacing: 8 * s) {
                     ForEach(Array(events.prefix(limit).enumerated()), id: \.offset) { _, e in
                         HStack(alignment: .top, spacing: 7 * s) {
-                            Capsule().fill(.red).frame(width: 3 * s)
+                            Capsule().fill(SystemColor.red).frame(width: 3 * s)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(e.title).font(.system(size: 13.5 * s, weight: .bold)).lineLimit(1)
                                 Text(eventTime(e)).font(.system(size: 10.5 * s, weight: .medium)).opacity(0.75).lineLimit(1)
@@ -642,7 +671,7 @@ private struct RemindersWidget: View {
             VStack(alignment: .leading, spacing: 2 * s) {
                 Image(systemName: "checklist").font(.system(size: 16 * s, weight: .semibold))
                 Spacer(minLength: 0)
-                Text(access ? "\(reminders.count)" : "—").font(.system(size: 30 * s, weight: .light))
+                Text(access ? "\(reminders.count)" : "—").font(.system(size: 30 * s, weight: .regular)).tracking(-0.02 * 30 * s)
                 Text(access ? (reminders.first?.title ?? tr("Tutto fatto", "All done")) : tr("Consenti l'accesso", "Allow access"))
                     .font(.system(size: 10.5 * s, weight: .semibold)).lineLimit(2).opacity(0.85)
             }
@@ -665,7 +694,7 @@ private struct RemindersWidget: View {
                                 Image(systemName: "circle").font(.system(size: 9 * s, weight: .bold)).opacity(0.7)
                                 Text(r.title).lineLimit(1)
                                 if let due = r.due, due < now {
-                                    Image(systemName: "exclamationmark").font(.system(size: 9 * s, weight: .heavy)).foregroundStyle(.orange)
+                                    Image(systemName: "exclamationmark").font(.system(size: 9 * s, weight: .heavy)).foregroundStyle(SystemColor.orange)
                                 }
                             }
                             .font(.system(size: 12.5 * s, weight: .semibold))
@@ -721,7 +750,7 @@ private struct Gauge: View {
                 .frame(width: 60 * s, height: 60 * s)
                 VStack(alignment: .leading, spacing: 2 * s) {
                     Text(label).font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary)
-                    Text(value).font(.system(size: (size == .wide ? 40 : 26) * s, weight: .light))
+                    Text(value).font(.system(size: (size == .wide ? 40 : 26) * s, weight: .regular)).tracking(-0.02 * (size == .wide ? 40 : 26) * s)
                     Text(detail).font(.system(size: 10.5 * s, weight: .semibold)).opacity(0.8).lineLimit(1).minimumScaleFactor(0.75)
                     if size == .wide {
                         LinearBar(progress: progress, s: s, tint: tint).padding(.top, 10 * s)
@@ -810,7 +839,7 @@ private struct CountdownWidget: View {
         case .large:
             VStack(spacing: 4 * s) {
                 Image(systemName: "flag.checkered").font(.system(size: 18 * s))
-                Text("\(abs(days))").font(.system(size: 64 * s, weight: .light))
+                Text("\(abs(days))").font(.system(size: 64 * s, weight: .regular)).tracking(-0.02 * 64 * s)
                 Text(unit).font(.system(size: 12 * s, weight: .semibold)).foregroundStyle(.secondary)
                 Text(label).font(.system(size: 15 * s, weight: .semibold)).lineLimit(1)
                 Text(dateText).font(.system(size: 10.5 * s, weight: .medium)).opacity(0.7)
@@ -826,7 +855,7 @@ private struct CountdownWidget: View {
                 }
                 Spacer(minLength: 0)
                 HStack(alignment: .firstTextBaseline, spacing: 4 * s) {
-                    Text("\(abs(days))").font(.system(size: (size == .wide ? 80 : 40) * s, weight: .light))
+                    Text("\(abs(days))").font(.system(size: (size == .wide ? 80 : 40) * s, weight: .regular)).tracking(-0.02 * (size == .wide ? 80 : 40) * s)
                     Text(unit).font(.system(size: 12 * s, weight: .semibold)).opacity(0.75)
                 }
             }
@@ -1052,7 +1081,7 @@ private struct ClockWidget: View {
                         .frame(width: (size == .wide ? 160 : 62) * s, height: (size == .wide ? 160 : 62) * s)
                     VStack(alignment: .leading, spacing: 2 * s) {
                         Text(title ?? tr("Ora locale", "Local time")).font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
-                        Text(ctx.date, format: digital).font(.system(size: (size == .wide ? 52 : 26) * s, weight: .light))
+                        Text(ctx.date, format: digital).font(.system(size: (size == .wide ? 52 : 26) * s, weight: .regular)).tracking(-0.02 * (size == .wide ? 52 : 26) * s)
                             .lineLimit(1).minimumScaleFactor(0.6)
                         Text(title == nil ? ctx.date.formatted(.dateTime.weekday(.wide).day().month(.wide)) : offsetText(timeZone, now: ctx.date))
                             .font(.system(size: 10.5 * s, weight: .medium)).opacity(0.75).lineLimit(1)
@@ -1112,10 +1141,10 @@ private struct ClockFace: View {
                 var sp = Path()
                 sp.move(to: point(sec / 60 * 2 * .pi + .pi, r * 0.15))
                 sp.addLine(to: point(sec / 60 * 2 * .pi, r * 0.84))
-                g.stroke(sp, with: .color(.orange), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                g.stroke(sp, with: .color(SystemColor.orange), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
             }
             let dot = max(3, r * 0.05)
-            g.fill(Path(ellipseIn: CGRect(x: c.x - dot, y: c.y - dot, width: dot * 2, height: dot * 2)), with: .color(seconds ? .orange : .white))
+            g.fill(Path(ellipseIn: CGRect(x: c.x - dot, y: c.y - dot, width: dot * 2, height: dot * 2)), with: .color(seconds ? SystemColor.orange : .white))
         }
     }
 }

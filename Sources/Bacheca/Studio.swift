@@ -145,6 +145,10 @@ private struct DraggableCard: View {
     @State private var drag: CGSize = .zero
     @State private var dragging = false
     @State private var hover = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Critically damped spring: settles without overshoot, as Apple recommends for repositioning.
+    static let settle = Animation.spring(response: 0.3, dampingFraction: 1)
 
     var body: some View {
         let m = Metrics(s: store.config.scale)
@@ -156,7 +160,7 @@ private struct DraggableCard: View {
                     .strokeBorder(.white.opacity(selected ? 0.9 : hover ? 0.35 : 0), lineWidth: 2)
                     .padding(-5)
             }
-            .scaleEffect(dragging ? 1.03 : 1)
+            .scaleEffect(dragging && !reduceMotion ? 1.03 : 1)
             .shadow(color: .black.opacity(dragging ? 0.4 : 0), radius: 18, y: 8)
             .opacity(dragging && edit.overTrash ? 0.45 : 1)
             .contentShape(Rectangle())
@@ -183,7 +187,7 @@ private struct DraggableCard: View {
                         }
                         let next = CGSize(width: target.x - start.x, height: target.y - start.y)
                         if next != drag {
-                            withAnimation(free ? nil : .snappy(duration: 0.18)) { drag = next }
+                            withAnimation(free || reduceMotion ? nil : Self.settle) { drag = next }
                         }
                         edit.overTrash = edit.trashFrame.contains(v.location)
                     }
@@ -246,6 +250,7 @@ private struct ResizeHandle: View {
     @ObservedObject var edit: EditState
     @EnvironmentObject var store: ConfigStore
     @State private var start: (size: CGSize, topLeft: CGPoint)?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let m = Metrics(s: store.config.scale)
@@ -279,7 +284,7 @@ private struct ResizeHandle: View {
                             // Keeps the grown card inside the grid when it would spill past an edge.
                             center = LayoutGrid(m: m, screen: screen).snap(center: center, size: best)
                         }
-                        withAnimation(.snappy(duration: 0.2)) {
+                        withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 1)) {
                             store.config.items[i].size = best
                             store.config.items[i].x = Double(center.x / screen.width)
                             store.config.items[i].y = Double(center.y / screen.height)
