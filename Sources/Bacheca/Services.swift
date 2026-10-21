@@ -36,6 +36,17 @@ struct WeatherNow {
         }
     }
 
+    /// Background colors for the weather card, top to bottom.
+    var sky: [Color] {
+        if !isDay { return [Color(red: 0.05, green: 0.09, blue: 0.24), Color(red: 0.17, green: 0.20, blue: 0.40)] }
+        switch code {
+        case 0, 1: return [Color(red: 0.16, green: 0.46, blue: 0.88), Color(red: 0.42, green: 0.70, blue: 0.97)]
+        case 51...67, 80...82, 95...99: return [Color(red: 0.20, green: 0.27, blue: 0.38), Color(red: 0.36, green: 0.44, blue: 0.56)]
+        case 71...77, 85, 86: return [Color(red: 0.48, green: 0.58, blue: 0.72), Color(red: 0.74, green: 0.81, blue: 0.90)]
+        default: return [Color(red: 0.33, green: 0.40, blue: 0.51), Color(red: 0.55, green: 0.62, blue: 0.71)]
+        }
+    }
+
     var symbol: String {
         switch code {
         case 0: isDay ? "sun.max.fill" : "moon.stars.fill"

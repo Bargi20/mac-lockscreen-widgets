@@ -305,6 +305,12 @@ private struct CardToolbar: View {
     let screen: CGSize
     @EnvironmentObject var store: ConfigStore
 
+    private static let backColors: [RGBA] = [
+        RGBA(r: 0.20, g: 0.22, b: 0.30, a: 1), RGBA(r: 0.05, g: 0.05, b: 0.07, a: 1), RGBA(r: 0.10, g: 0.24, b: 0.52, a: 1),
+        RGBA(r: 0.13, g: 0.36, b: 0.27, a: 1), RGBA(r: 0.48, g: 0.14, b: 0.20, a: 1), RGBA(r: 0.86, g: 0.78, b: 0.66, a: 1),
+        RGBA(r: 0.96, g: 0.96, b: 0.95, a: 1),
+    ]
+
     private static let noteColors: [RGBA] = [
         .noteCoral, RGBA(r: 0.96, g: 0.80, b: 0.35, a: 1), RGBA(r: 0.55, g: 0.78, b: 0.52, a: 1),
         RGBA(r: 0.45, g: 0.65, b: 0.92, a: 1), RGBA(r: 0.72, g: 0.55, b: 0.88, a: 1), RGBA(r: 0.95, g: 0.95, b: 0.92, a: 1),
@@ -319,20 +325,36 @@ private struct CardToolbar: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .fixedSize()
-            if item.kind != .note && item.kind != .photo {
-                Toggle(isOn: binding(\.bare)) { Image(systemName: "square.dashed") }
-                    .toggleStyle(.button)
-                    .help(tr("Senza riquadro: il widget sta direttamente sullo sfondo", "No card: the widget sits right on the wallpaper"))
+            if item.hasRetro {
+                Menu {
+                    ForEach(Retro.allCases) { retro in
+                        Button {
+                            if retro == .image, item.backdropImage.isEmpty {
+                                guard let path = chooseImage(startingAt: nil) else { return }
+                                update { $0.backdropImage = path }
+                            }
+                            update { $0.retro = retro }
+                        } label: {
+                            Label(retro.title, systemImage: item.retro == retro ? "checkmark" : retro.symbol)
+                        }
+                    }
+                    if item.retro == .image {
+                        Divider()
+                        Button(tr("Cambia immagine…", "Change Image…")) {
+                            if let path = chooseImage(startingAt: item.backdropImage) { update { $0.backdropImage = path } }
+                        }
+                    }
+                } label: {
+                    Image(systemName: item.retro.symbol)
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .help(tr("Retro: cosa c'è dietro il widget", "Back: what sits behind the widget"))
             }
             if item.kind == .note {
-                HStack(spacing: 5) {
-                    ForEach(Self.noteColors, id: \.self) { c in
-                        Circle().fill(c.color)
-                            .frame(width: 16, height: 16)
-                            .overlay(Circle().strokeBorder(.white, lineWidth: item.color == c ? 2 : 0))
-                            .onTapGesture { update { $0.color = c } }
-                    }
-                }
+                Swatches(colors: Self.noteColors, selected: item.color) { c in update { $0.color = c } }
+            } else if item.hasRetro && item.retro == .color {
+                Swatches(colors: Self.backColors, selected: item.backdropColor) { c in update { $0.backdropColor = c } }
             }
             Button(role: .destructive) {
                 withAnimation(.snappy) { store.config.items.removeAll { $0.id == item.id } }
@@ -356,6 +378,35 @@ private struct CardToolbar: View {
     private func binding<T>(_ key: WritableKeyPath<WidgetItem, T>) -> Binding<T> {
         Binding(get: { item[keyPath: key] }, set: { v in update { $0[keyPath: key] = v } })
     }
+}
+
+private struct Swatches: View {
+    let colors: [RGBA]
+    let selected: RGBA
+    let pick: (RGBA) -> Void
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(colors, id: \.self) { c in
+                Circle().fill(c.color)
+                    .frame(width: 16, height: 16)
+                    .overlay(Circle().strokeBorder(.white, lineWidth: selected == c ? 2 : 0.5))
+                    .onTapGesture { pick(c) }
+            }
+        }
+    }
+}
+
+/// Asks for a picture file. The panel is raised above the studio, which covers the whole screen.
+@MainActor
+func chooseImage(startingAt path: String?) -> String? {
+    let panel = NSOpenPanel()
+    panel.allowedContentTypes = [.image]
+    panel.allowsMultipleSelection = false
+    panel.prompt = tr("Usa questa immagine", "Use This Image")
+    panel.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
+    if let path, !path.isEmpty { panel.directoryURL = URL(fileURLWithPath: path).deletingLastPathComponent() }
+    return panel.runModal() == .OK ? panel.url?.path : nil
 }
 
 // MARK: - Bottom bar: palette, arrange, trash

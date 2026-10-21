@@ -26,7 +26,7 @@ The app lives in the menu bar (padlock icon). From there open **Settings…** or
 - hold ⌥ (Option) while dragging to place a widget freely; **Grid** turns snapping off;
 - **Align** moves every widget to its nearest grid cell; **In rows** lines them up in rows under the clock;
 - pull the handle in a widget's bottom-right corner to resize it: it snaps to the nearest of S, M, L and XL;
-- click a widget to pick its size (S · M · L · XL), remove its card, pick a color (sticky note) or delete it;
+- click a widget to pick its size (S · M · L · XL), its back, a color or delete it;
 - click a widget in the bottom bar to open the gallery with a live preview in all four sizes; click the one you want or drag it onto the screen;
 - drop a widget on the trash to remove it; Esc or **Done** closes the studio.
 
@@ -51,7 +51,9 @@ Like iPhone widgets, every widget comes in four sizes, each with its own layout:
 | Moon Phase | S moon · M/XL + name, % and next full moon · L large moon | computed on the Mac |
 | Countdown | S days · M/XL name, date and days · L big number | date of your choice |
 
-Up to 16 widgets. Every widget (except notes and photos) can drop its card and sit right on the wallpaper.
+Up to 16 widgets. Each widget (except notes and photos) has its own **back**: the general card style, none (it sits right on the wallpaper), a color, your desktop wallpaper, or an image of your choice. For example, a clock used instead of the Mac's own can carry the wallpaper behind it.
+
+Weather cards take on the sky of the current conditions (clear, cloudy, rain, snow, night); battery and day rings are colored.
 
 Card styles: Glass, Tinted glass, Dark, Light, Solid, Outline, No background. Color, overall size and font (Standard, Rounded, Serif, Mono) are in Settings.
 

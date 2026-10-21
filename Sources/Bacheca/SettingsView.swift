@@ -169,8 +169,20 @@ private struct ItemRow: View {
                         }
                         .labelsHidden().fixedSize()
                     }
-                    if item.kind != .note && item.kind != .photo {
-                        Toggle(tr("Senza riquadro", "No card"), isOn: $item.bare)
+                    if item.hasRetro {
+                        Picker(tr("Retro", "Back"), selection: $item.retro) {
+                            ForEach(Retro.allCases) { Text($0.title).tag($0) }
+                        }
+                        .fixedSize()
+                        if item.retro == .color {
+                            ColorPicker(tr("Colore", "Color"), selection: Binding(get: { item.backdropColor.color }, set: { item.backdropColor = RGBA($0) }), supportsOpacity: false)
+                                .labelsHidden()
+                        }
+                        if item.retro == .image {
+                            Button(item.backdropImage.isEmpty ? tr("Scegli immagine…", "Choose Image…") : URL(fileURLWithPath: item.backdropImage).lastPathComponent) {
+                                if let path = chooseImage(startingAt: item.backdropImage) { item.backdropImage = path }
+                            }
+                        }
                     }
                     if item.kind == .note {
                         ColorPicker(tr("Colore", "Color"), selection: Binding(get: { item.color.color }, set: { item.color = RGBA($0) }), supportsOpacity: false)

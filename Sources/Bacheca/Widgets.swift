@@ -71,23 +71,56 @@ struct PreviewBackdrop: View {
 struct WidgetCard: View {
     let item: WidgetItem
     @EnvironmentObject var store: ConfigStore
+    @EnvironmentObject var weather: WeatherService
 
     var body: some View {
         let c = store.config
         let m = Metrics(s: c.scale)
         let size = m.size(item.size)
         let shape = RoundedRectangle(cornerRadius: m.radius, style: .continuous)
+        let white = foreground(c) == .white
         WidgetContent(item: item, m: m, size: size)
             .foregroundStyle(foreground(c))
             .fontDesign(c.fontStyle.design)
+            // A faint shadow keeps white text readable on light wallpapers seen through glass.
+            .shadow(color: .black.opacity(white && item.kind != .photo ? 0.22 : 0), radius: 1.5, y: 0.5)
             .frame(width: size.width, height: size.height)
-            .modifier(CardChrome(item: item, style: c.style, accent: c.accent.color, shape: shape))
+            .modifier(CardChrome(item: item, style: c.style, accent: c.accent.color, shape: shape, sky: sky(c)))
     }
 
     private func foreground(_ c: Config) -> Color {
         if item.bare { return .white }
         if item.kind == .note { return item.color.isLight ? .black.opacity(0.85) : .white }
+        if item.hasRetro {
+            switch item.backdrop {
+            case .color: return item.backdropColor.isLight ? .black.opacity(0.85) : .white
+            case .wallpaper, .image: return .white
+            case .style: break
+            }
+        }
+        if sky(c) != nil { return .white }
         return c.foreground
+    }
+
+    /// Weather cards take on the sky of the current conditions, except in styles with their own color.
+    private func sky(_ c: Config) -> [Color]? {
+        guard item.kind == .weather, !item.bare, item.backdrop == .style, let w = weather.now,
+              [.glass, .tinted, .dark].contains(c.style) else { return nil }
+        return w.sky
+    }
+}
+
+/// Image behind a widget whose back is the desktop wallpaper or a chosen picture.
+@MainActor
+private func backdropImage(_ item: WidgetItem) -> NSImage? {
+    switch item.backdrop {
+    case .wallpaper:
+        guard let screen = NSScreen.main, let url = NSWorkspace.shared.desktopImageURL(for: screen) else { return nil }
+        return PhotoLibrary.shared.image(url)
+    case .image:
+        return item.backdropImage.isEmpty ? nil : PhotoLibrary.shared.image(URL(fileURLWithPath: item.backdropImage))
+    default:
+        return nil
     }
 }
 
@@ -96,6 +129,7 @@ private struct CardChrome: ViewModifier {
     let style: CardStyle
     let accent: Color
     let shape: RoundedRectangle
+    let sky: [Color]?
 
     func body(content: Content) -> some View {
         if item.bare {
@@ -104,12 +138,39 @@ private struct CardChrome: ViewModifier {
             content
                 .clipShape(shape)
                 .background(
-                    LinearGradient(colors: [item.color.color.opacity(0.95), item.color.color],
+                    LinearGradient(colors: [item.color.color.opacity(0.92), item.color.color],
                                    startPoint: .topLeading, endPoint: .bottomTrailing),
                     in: shape)
+                .overlay(shape.strokeBorder(.white.opacity(0.2), lineWidth: 1))
+                .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
+        } else if item.hasRetro && item.backdrop == .color {
+            content
+                .clipShape(shape)
+                .background(item.backdropColor.color, in: shape)
+                .overlay(shape.strokeBorder(.white.opacity(0.15), lineWidth: 1))
+        } else if item.hasRetro, item.backdrop == .wallpaper || item.backdrop == .image {
+            content
+                .background {
+                    if let image = backdropImage(item) {
+                        Image(nsImage: image).resizable().scaledToFill()
+                            // A soft darkening at the bottom keeps text readable on any picture.
+                            .overlay(LinearGradient(colors: [.black.opacity(0.05), .black.opacity(0.35)], startPoint: .top, endPoint: .bottom))
+                    } else {
+                        Color.black.opacity(0.35)
+                    }
+                }
+                .clipShape(shape)
+                .overlay(shape.strokeBorder(.white.opacity(0.22), lineWidth: 1))
                 .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
         } else {
-            content.clipShape(shape).modifier(CardBackground(style: style, accent: accent, shape: shape))
+            content
+                .background {
+                    if let sky {
+                        LinearGradient(colors: sky, startPoint: .top, endPoint: .bottom).opacity(0.8)
+                    }
+                }
+                .clipShape(shape)
+                .modifier(CardBackground(style: style, accent: accent, shape: shape))
         }
     }
 }
@@ -122,10 +183,15 @@ private struct CardBackground: ViewModifier {
     func body(content: Content) -> some View {
         switch style {
         case .glass:
+            // A light dark wash under the glass keeps white text legible on bright wallpapers.
             if #available(macOS 26.0, *) {
-                content.glassEffect(.regular, in: shape)
+                content
+                    .background(Color.black.opacity(0.1), in: shape)
+                    .glassEffect(.regular, in: shape)
             } else {
-                content.background(.ultraThinMaterial, in: shape)
+                content
+                    .background(Color.black.opacity(0.1), in: shape)
+                    .background(.ultraThinMaterial, in: shape)
             }
         case .tinted:
             // A glass tint alone barely shows over the lock screen, so the color sits under a thin material.
@@ -200,7 +266,8 @@ private struct WidgetContent: View {
             if let level = battery.level {
                 Gauge(size: sz, m: m, progress: level, symbol: battery.charging ? "bolt.fill" : "battery.100",
                       value: "\(Int((level * 100).rounded()))%", label: tr("Batteria", "Battery"),
-                      detail: battery.charging ? tr("In carica", "Charging") : level < 0.2 ? tr("Batteria scarica", "Low battery") : tr("Con batteria", "On battery"))
+                      detail: battery.charging ? tr("In carica", "Charging") : level < 0.2 ? tr("Batteria scarica", "Low battery") : tr("Con batteria", "On battery"),
+                      tint: AnyShapeStyle(level < 0.2 && !battery.charging ? Color.red : Color.green))
             } else {
                 Gauge(size: sz, m: m, progress: 1, symbol: "powerplug.fill", value: "—", label: tr("Batteria", "Battery"), detail: tr("Alimentato dalla rete", "On power adapter"))
             }
@@ -208,7 +275,9 @@ private struct WidgetContent: View {
             let p = now.timeIntervalSince(Calendar.current.startOfDay(for: now)) / 86400
             let left = Int((1 - p) * 24 * 60)
             Gauge(size: sz, m: m, progress: p, symbol: "sun.horizon.fill", value: "\(Int(p * 100))%", label: tr("Giornata", "Day"),
-                  detail: tr("Mancano \(left / 60) h \(left % 60) min", "\(left / 60) h \(left % 60) min left"))
+                  detail: tr("Mancano \(left / 60) h \(left % 60) min", "\(left / 60) h \(left % 60) min left"),
+                  tint: AnyShapeStyle(AngularGradient(colors: [.yellow, .orange, .pink], center: .center,
+                                                      startAngle: .degrees(0), endAngle: .degrees(360 * max(0.05, p)))))
         case .moon:
             MoonWidget(size: sz, m: m, now: now)
         case .countdown:
@@ -422,7 +491,7 @@ private struct CalendarWidget: View {
             }
             .padding(.horizontal, 12 * s)
         case .large:
-            MonthGrid(now: now, s: s).padding(14 * s)
+            MonthGrid(now: now, s: s, cell: 20).padding(14 * s).frame(maxWidth: .infinity, maxHeight: .infinity)
         case .wide:
             HStack(alignment: .top, spacing: 16 * s) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -475,6 +544,7 @@ private struct WeekStrip: View {
 private struct MonthGrid: View {
     let now: Date
     let s: Double
+    var cell: Double = 16
 
     var body: some View {
         let cal = localCalendar()
@@ -495,12 +565,12 @@ private struct MonthGrid: View {
                 ForEach(Array(cells.enumerated()), id: \.offset) { _, day in
                     if let day {
                         Text("\(day)")
-                            .font(.system(size: 9 * s, weight: day == today ? .bold : .medium))
-                            .frame(width: 16 * s, height: 16 * s)
+                            .font(.system(size: cell * 0.56 * s, weight: day == today ? .bold : .medium))
+                            .frame(width: cell * s, height: cell * s)
                             .background(day == today ? Circle().fill(.red) : nil)
                             .foregroundStyle(day == today ? .white : .primary)
                     } else {
-                        Color.clear.frame(height: 16 * s)
+                        Color.clear.frame(height: cell * s)
                     }
                 }
             }
@@ -617,19 +687,20 @@ private struct Gauge: View {
     let value: String
     let label: String
     let detail: String
+    var tint: AnyShapeStyle? = nil
 
     var body: some View {
         let s = m.s
         switch size {
         case .small:
-            Ring(progress: progress, m: m, lineWidth: 6) {
+            Ring(progress: progress, m: m, lineWidth: 6, tint: tint) {
                 Image(systemName: symbol).font(.system(size: 10 * s))
                 Text(value).font(.system(size: 17 * s, weight: .bold))
             }
             .padding(12 * s)
         case .large:
             VStack(spacing: 10 * s) {
-                Ring(progress: progress, m: m, lineWidth: 11) {
+                Ring(progress: progress, m: m, lineWidth: 11, tint: tint) {
                     Image(systemName: symbol).font(.system(size: 16 * s))
                     Text(value).font(.system(size: 30 * s, weight: .bold))
                 }
@@ -638,16 +709,16 @@ private struct Gauge: View {
             }
         case .medium, .wide:
             HStack(spacing: 14 * s) {
-                Ring(progress: progress, m: m, lineWidth: 6) {
+                Ring(progress: progress, m: m, lineWidth: 6, tint: tint) {
                     Image(systemName: symbol).font(.system(size: 14 * s))
                 }
                 .frame(width: 60 * s, height: 60 * s)
                 VStack(alignment: .leading, spacing: 2 * s) {
                     Text(label).font(.system(size: 10 * s, weight: .bold)).textCase(.uppercase).opacity(0.7)
                     Text(value).font(.system(size: (size == .wide ? 40 : 26) * s, weight: .light))
-                    Text(detail).font(.system(size: 10.5 * s, weight: .semibold)).opacity(0.8).lineLimit(1)
+                    Text(detail).font(.system(size: 10.5 * s, weight: .semibold)).opacity(0.8).lineLimit(1).minimumScaleFactor(0.75)
                     if size == .wide {
-                        LinearBar(progress: progress, s: s).padding(.top, 10 * s)
+                        LinearBar(progress: progress, s: s, tint: tint).padding(.top, 10 * s)
                     }
                 }
                 Spacer(minLength: 0)
@@ -660,11 +731,12 @@ private struct Gauge: View {
 private struct LinearBar: View {
     let progress: Double
     let s: Double
+    var tint: AnyShapeStyle? = nil
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Capsule().fill(.primary.opacity(0.25))
-                Capsule().fill(.primary).frame(width: geo.size.width * min(1, max(0, progress)))
+                Capsule().fill(.primary.opacity(0.22))
+                Capsule().fill(tint ?? AnyShapeStyle(.foreground)).frame(width: geo.size.width * min(1, max(0, progress)))
             }
         }
         .frame(height: 5 * s)
@@ -957,8 +1029,8 @@ private struct ClockWidget: View {
                     ClockFace(date: ctx.date, timeZone: timeZone, seconds: title == nil)
                     if let title {
                         Text(String(title.prefix(3)).uppercased())
-                            .font(.system(size: 9 * s, weight: .bold)).opacity(0.75)
-                            .offset(y: 16 * s)
+                            .font(.system(size: 8 * s, weight: .bold)).opacity(0.75)
+                            .offset(y: 22 * s)
                     }
                 }
                 .padding(10 * s)
@@ -999,6 +1071,9 @@ private struct ClockFace: View {
             func point(_ angle: Double, _ len: Double) -> CGPoint {
                 CGPoint(x: c.x + len * sin(angle), y: c.y - len * cos(angle))
             }
+            var dial = g
+            dial.opacity = 0.07
+            dial.fill(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2)), with: .foreground)
             for i in 0..<60 {
                 let a = Double(i) / 60 * 2 * .pi
                 let major = i % 5 == 0
@@ -1008,6 +1083,12 @@ private struct ClockFace: View {
                 var tick = g
                 tick.opacity = major ? 0.9 : 0.35
                 tick.stroke(p, with: .foreground, lineWidth: major ? 2 : 1)
+            }
+            if r > 50 {
+                for (n, hour) in [(12, 0.0), (3, 3.0), (6, 6.0), (9, 9.0)] {
+                    g.draw(Text("\(n)").font(.system(size: r * 0.17, weight: .semibold, design: .rounded)).foregroundStyle(.foreground),
+                           at: point(hour / 12 * 2 * .pi, r * 0.64))
+                }
             }
             var cal = Calendar.current
             cal.timeZone = timeZone
@@ -1066,14 +1147,16 @@ private struct Ring<Inner: View>: View {
     let progress: Double
     let m: Metrics
     var lineWidth: Double = 6
+    /// Color of the filled arc; the text color when nil.
+    var tint: AnyShapeStyle? = nil
     @ViewBuilder let inner: Inner
 
     var body: some View {
         ZStack {
-            Circle().stroke(.primary.opacity(0.25), lineWidth: lineWidth * m.s)
+            Circle().stroke(.primary.opacity(0.22), lineWidth: lineWidth * m.s)
             Circle()
                 .trim(from: 0, to: max(0.001, min(1, progress)))
-                .stroke(style: StrokeStyle(lineWidth: lineWidth * m.s, lineCap: .round))
+                .stroke(tint ?? AnyShapeStyle(.foreground), style: StrokeStyle(lineWidth: lineWidth * m.s, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 0) { inner }
         }
@@ -1087,9 +1170,12 @@ struct MoonView: View {
         Canvas { ctx, size in
             let r = min(size.width, size.height) / 2
             let c = CGPoint(x: size.width / 2, y: size.height / 2)
-            var dim = ctx
-            dim.opacity = 0.22
-            dim.fill(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2)), with: .foreground)
+            let disk = Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2))
+            var dark = ctx
+            dark.opacity = 0.16
+            dark.fill(disk, with: .color(.white))
+            dark.opacity = 0.3
+            dark.stroke(disk, with: .color(.white), lineWidth: max(1, r * 0.02))
             // Lit side: right while waxing, left while waning. The terminator is the limb squashed by k.
             let side: Double = phase < 0.5 ? 1 : -1
             let k = cos(2 * .pi * phase)
@@ -1105,7 +1191,11 @@ struct MoonView: View {
                 lit.addLine(to: CGPoint(x: c.x + side * r * cos(t) * k, y: c.y + r * sin(t)))
             }
             lit.closeSubpath()
-            ctx.fill(lit, with: .foreground)
+            var glow = ctx
+            glow.addFilter(.shadow(color: .white.opacity(0.45), radius: r * 0.18))
+            glow.fill(lit, with: .radialGradient(
+                Gradient(colors: [.white, Color(white: 0.86), Color(white: 0.72)]),
+                center: CGPoint(x: c.x - side * r * 0.25, y: c.y - r * 0.3), startRadius: 0, endRadius: r * 1.4))
         }
         .aspectRatio(1, contentMode: .fit)
     }

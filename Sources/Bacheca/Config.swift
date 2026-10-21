@@ -105,6 +105,10 @@ struct WidgetItem: Codable, Identifiable, Hashable {
     var text: String = tr("Ricorda:\nPortatile\nPortafoglio\nChiavi", "Remember:\nLaptop\nWallet\nKeys")
     var folderPath: String = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures").path
     var photoMinutes: Int = 10
+    /// What fills the card when it has one (see `retro`).
+    var backdrop: CardBackdrop = .style
+    var backdropColor: RGBA = RGBA(r: 0.20, g: 0.22, b: 0.30, a: 1)
+    var backdropImage: String = ""
 
     init(kind: WidgetKind, size: WidgetSize? = nil, x: Double = 0.5, y: Double = 0.55) {
         self.kind = kind
@@ -141,10 +145,53 @@ extension WidgetItem {
         text = try c.decodeIfPresent(String.self, forKey: .text) ?? text
         folderPath = try c.decodeIfPresent(String.self, forKey: .folderPath) ?? folderPath
         photoMinutes = try c.decodeIfPresent(Int.self, forKey: .photoMinutes) ?? photoMinutes
+        backdrop = try c.decodeIfPresent(CardBackdrop.self, forKey: .backdrop) ?? backdrop
+        backdropColor = try c.decodeIfPresent(RGBA.self, forKey: .backdropColor) ?? backdropColor
+        backdropImage = try c.decodeIfPresent(String.self, forKey: .backdropImage) ?? backdropImage
     }
+
+    /// The back of the widget as one choice: no card, or a card filled by the style, a color,
+    /// the desktop wallpaper or an image.
+    var retro: Retro {
+        get { bare ? .none : Retro(rawValue: backdrop.rawValue) ?? .style }
+        set {
+            bare = newValue == .none
+            if let b = CardBackdrop(rawValue: newValue.rawValue) { backdrop = b }
+        }
+    }
+
+    /// Notes and photos fill their own card, so they keep it.
+    var hasRetro: Bool { kind != .note && kind != .photo }
 
     /// Saved by a version without free positioning.
     var needsPlacement: Bool { x < 0 || y < 0 }
+}
+
+enum CardBackdrop: String, Codable {
+    case style, color, wallpaper, image
+}
+
+enum Retro: String, CaseIterable, Identifiable {
+    case style, none, color, wallpaper, image
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .style: tr("Stile generale", "Card style")
+        case .none: tr("Nessuno", "None")
+        case .color: tr("Colore", "Color")
+        case .wallpaper: tr("Sfondo della scrivania", "Desktop wallpaper")
+        case .image: tr("Immagine", "Image")
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .style: "square.fill"
+        case .none: "square.dashed"
+        case .color: "paintpalette"
+        case .wallpaper: "photo.on.rectangle"
+        case .image: "photo"
+        }
+    }
 }
 
 enum CardStyle: String, Codable, CaseIterable, Identifiable {
