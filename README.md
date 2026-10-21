@@ -64,3 +64,7 @@ Stili dei riquadri: Vetro, Vetro colorato, Scuro, Chiaro, Pieno, Contorno, Senza
 - `Services.swift`: meteo, musica, batteria, calendario
 - `SettingsView.swift`: finestra delle impostazioni
 - `Config.swift`: modello e salvataggio delle preferenze
+
+## Licenza
+
+Bacheca è distribuita con licenza [MIT](LICENSE). Il codice ripreso da SkyLightWindow e i servizi usati (Open-Meteo, LRCLIB) sono elencati in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
