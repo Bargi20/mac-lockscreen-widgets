@@ -68,6 +68,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Opening Bacheca again (Finder, Spotlight, Launchpad) shows Settings: the menu bar icon can
+    /// be hidden behind the notch when the menu bar is full.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        openSettings()
+        return true
+    }
+
     // MARK: Status item
 
     private func setUpStatusItem() {
