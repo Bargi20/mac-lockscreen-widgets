@@ -91,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             reason: "Showing widgets on the lock screen")
         guard let screen = NSScreen.screens.first else { return }
         let window = OverlayWindow(screen: screen, interactive: false)
-        window.contentView = NSHostingView(rootView: env.inject(LockScreenView(mode: .lock, backdrop: LockBackdrop.make(for: screen))))
+        window.contentView = NSHostingView(rootView: env.inject(LockScreenView(mode: .lock)))
         if !simulated { SkyLight.shared?.adopt(window) }
         window.orderFrontRegardless()
         lockWindows = [window]
