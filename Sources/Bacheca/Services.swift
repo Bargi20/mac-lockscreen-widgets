@@ -559,7 +559,6 @@ final class AppEnvironment {
     let battery = BatteryService()
     let calendar = CalendarService()
     let ticker = Ticker()
-    let wallpaper = WallpaperCapture()
     private var timers: [Timer] = []
     private var kindsWatch: AnyCancellable?
 
@@ -578,10 +577,6 @@ final class AppEnvironment {
         timers.append(Timer.scheduledTimer(withTimeInterval: 15 * 60, repeats: true) { _ in
             MainActor.assumeIsolated { self.refreshAll() }
         })
-        // The Macintosh and other dynamic wallpapers keep changing: capture the current one often.
-        timers.append(Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
-            MainActor.assumeIsolated { self.captureWallpaper() }
-        })
         // Keeps lyrics in step with the player's real position.
         timers.append(Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { _ in
             MainActor.assumeIsolated {
@@ -590,12 +585,7 @@ final class AppEnvironment {
         })
     }
 
-    func captureWallpaper() {
-        if store.config.lockGlassCapture { wallpaper.refresh() }
-    }
-
     func refreshAll() {
-        captureWallpaper()
         battery.refresh()
         calendar.refresh()
         PhotoLibrary.shared.reload()
@@ -630,6 +620,5 @@ final class AppEnvironment {
             .environmentObject(battery)
             .environmentObject(calendar)
             .environmentObject(ticker)
-            .environmentObject(wallpaper)
     }
 }
