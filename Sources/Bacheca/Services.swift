@@ -528,6 +528,26 @@ final class PhotoLibrary {
     }
 }
 
+// MARK: - Ticker
+
+/// The app's own clock for widgets that change over time (clock hands, lyrics, progress).
+/// SwiftUI's TimelineView pauses in windows macOS considers hidden, and over the lock screen
+/// the widget window counts as hidden, so updates are driven from here instead.
+@MainActor
+final class Ticker: ObservableObject {
+    @Published private(set) var now = Date()
+    private var timer: Timer?
+
+    init() {
+        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.now = Date() }
+        }
+        timer.tolerance = 0.05
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+}
+
 // MARK: - Shared environment
 
 @MainActor
@@ -538,6 +558,7 @@ final class AppEnvironment {
     let lyrics = LyricsService()
     let battery = BatteryService()
     let calendar = CalendarService()
+    let ticker = Ticker()
     private var timers: [Timer] = []
     private var kindsWatch: AnyCancellable?
 
@@ -598,5 +619,6 @@ final class AppEnvironment {
             .environmentObject(lyrics)
             .environmentObject(battery)
             .environmentObject(calendar)
+            .environmentObject(ticker)
     }
 }

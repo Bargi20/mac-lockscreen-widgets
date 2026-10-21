@@ -38,6 +38,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var previewWindow: OverlayWindow?
     private var settingsWindow: NSWindow?
     private var lockWatchdog: Timer?
+    /// Keeps App Nap from slowing the widgets' timers while the screen is locked.
+    private var lockActivity: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         env.start()
@@ -81,6 +83,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showLockWidgets() {
         hideLockWidgets()
+        lockActivity = ProcessInfo.processInfo.beginActivity(
+            options: [.userInitiatedAllowingIdleSystemSleep, .latencyCritical],
+            reason: "Showing widgets on the lock screen")
         guard let screen = NSScreen.screens.first else { return }
         let window = OverlayWindow(screen: screen, interactive: false)
         window.contentView = NSHostingView(rootView: env.inject(LockScreenView(mode: .lock)))
@@ -99,6 +104,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func hideLockWidgets() {
         lockWatchdog?.invalidate()
         lockWatchdog = nil
+        if let lockActivity { ProcessInfo.processInfo.endActivity(lockActivity) }
+        lockActivity = nil
         lockWindows.forEach { $0.orderOut(nil); $0.close() }
         lockWindows = []
     }

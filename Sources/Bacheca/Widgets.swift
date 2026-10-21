@@ -273,7 +273,7 @@ private struct WidgetContent: View {
         case .worldClock:
             ClockWidget(size: item.size, m: m, timeZone: TimeZone(identifier: item.timeZone) ?? .current, title: cityName(item.timeZone))
         default:
-            TimelineView(.periodic(from: .now, by: 30)) { ctx in
+            Ticking { ctx in
                 content(now: ctx.date)
             }
         }
@@ -883,7 +883,7 @@ private struct NowPlayingWidget: View {
 
     var body: some View {
         let s = m.s
-        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+        Ticking { ctx in
             switch item.size {
             case .small:
                 ZStack(alignment: .bottomLeading) {
@@ -1010,7 +1010,7 @@ private struct LyricsWidget: View {
         let s = m.s
         let sz = item.size
         let center = item.bare
-        TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
+        Ticking { ctx in
             let pos = music.position(at: ctx.date)
             let (before, after) = sz == .large ? (2, 3) : sz == .wide ? (1, 1) : (0, sz == .medium ? 1 : 0)
             let window = lyrics.window(at: pos, before: before, after: after)
@@ -1065,7 +1065,7 @@ private struct ClockWidget: View {
 
     var body: some View {
         let s = m.s
-        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+        Ticking { ctx in
             let digital = Date.FormatStyle(timeZone: timeZone).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits)
             switch size {
             case .small:
@@ -1244,6 +1244,19 @@ struct MoonView: View {
 }
 
 // MARK: - Helpers
+
+/// What `Ticking` hands its content, shaped like TimelineView's context.
+struct TickContext { let date: Date }
+
+/// Like `TimelineView`, but driven by the app's `Ticker`, so it keeps updating over the lock screen.
+struct Ticking<Content: View>: View {
+    @EnvironmentObject private var ticker: Ticker
+    private let content: (TickContext) -> Content
+
+    init(@ViewBuilder content: @escaping (TickContext) -> Content) { self.content = content }
+
+    var body: some View { content(TickContext(date: ticker.now)) }
+}
 
 func moonPhase(_ d: Date) -> Double {
     let synodic = 29.530588853
