@@ -8,6 +8,8 @@ final class EditState: ObservableObject {
     @Published var message: String?
     @Published var centerGuide = false
     @Published var overTrash = false
+    /// Grid cells are drawn while a card is being moved or resized.
+    @Published var showGrid = false
     /// Widget whose size gallery is open in the bottom bar.
     @Published var gallery: WidgetKind?
     /// Size shown in a badge while a corner handle is dragged.
@@ -38,6 +40,17 @@ private func parsePayload(_ s: String) -> (WidgetKind, WidgetSize?)? {
     return (kind, parts.count > 1 ? WidgetSize(rawValue: parts[1]) : nil)
 }
 
+/// Puts the newest widget on the grid, when the grid is on.
+@MainActor
+private func snapNewest(_ store: ConfigStore, _ screen: CGSize) {
+    guard store.config.snapToGrid, let i = store.config.items.indices.last else { return }
+    let item = store.config.items[i]
+    let p = LayoutGrid(m: Metrics(s: store.config.scale), screen: screen)
+        .snap(center: CGPoint(x: item.x * screen.width, y: item.y * screen.height), size: item.size)
+    store.config.items[i].x = Double(p.x / screen.width)
+    store.config.items[i].y = Double(p.y / screen.height)
+}
+
 // MARK: - Canvas
 
 struct StudioCanvas: View {
@@ -56,6 +69,12 @@ struct StudioCanvas: View {
                 }
                 .onDrop(of: [.plainText], delegate: PaletteDrop(store: store, edit: edit, screen: screen))
 
+            if edit.showGrid {
+                GridOverlay(grid: LayoutGrid(m: Metrics(s: store.config.scale), screen: screen))
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+
             if edit.centerGuide {
                 Rectangle().fill(.yellow.opacity(0.8))
                     .frame(width: 1, height: screen.height)
@@ -72,12 +91,15 @@ struct StudioCanvas: View {
         }
         .frame(width: screen.width, height: screen.height)
         .coordinateSpace(name: "studio")
+        .animation(.easeOut(duration: 0.15), value: edit.showGrid)
         .onAppear {
-            // Development aid: `--gallery` opens the size gallery and selects the first widget.
+            // Development aids: `--gallery` opens the size gallery and selects the first widget,
+            // `--grid` shows the grid cells.
             if CommandLine.arguments.contains("--gallery") {
                 edit.gallery = .weather
                 edit.selected = store.config.items.first?.id
             }
+            if CommandLine.arguments.contains("--grid") { edit.showGrid = true }
         }
     }
 }
@@ -99,6 +121,7 @@ private struct PaletteDrop: DropDelegate {
                 MainActor.assumeIsolated {
                     withAnimation(.snappy) {
                         if store.add(kind, size: size, at: point) {
+                            snapNewest(store, screen)
                             edit.selected = store.config.items.last?.id
                             edit.gallery = nil
                         } else {
@@ -133,6 +156,61 @@ private struct DraggableCard: View {
                     .strokeBorder(.white.opacity(selected ? 0.9 : hover ? 0.35 : 0), lineWidth: 2)
                     .padding(-5)
             }
+            .scaleEffect(dragging ? 1.03 : 1)
+            .shadow(color: .black.opacity(dragging ? 0.4 : 0), radius: 18, y: 8)
+            .opacity(dragging && edit.overTrash ? 0.45 : 1)
+            .contentShape(Rectangle())
+            .onHover { hover = $0 }
+            .onTapGesture { edit.selected = item.id }
+            .gesture(
+                DragGesture(minimumDistance: 2, coordinateSpace: .named("studio"))
+                    .onChanged { v in
+                        dragging = true
+                        edit.selected = item.id
+                        let start = CGPoint(x: item.x * screen.width, y: item.y * screen.height)
+                        var target = CGPoint(x: start.x + v.translation.width, y: start.y + v.translation.height)
+                        // Hold Option to place a card freely, off the grid.
+                        let free = !store.config.snapToGrid || NSEvent.modifierFlags.contains(.option)
+                        if free {
+                            // Snap to the horizontal center of the screen.
+                            edit.centerGuide = abs(target.x - screen.width / 2) < 8
+                            if edit.centerGuide { target.x = screen.width / 2 }
+                            edit.showGrid = false
+                        } else {
+                            target = LayoutGrid(m: m, screen: screen).snap(center: target, size: item.size)
+                            edit.centerGuide = false
+                            edit.showGrid = true
+                        }
+                        let next = CGSize(width: target.x - start.x, height: target.y - start.y)
+                        if next != drag {
+                            withAnimation(free ? nil : .snappy(duration: 0.18)) { drag = next }
+                        }
+                        edit.overTrash = edit.trashFrame.contains(v.location)
+                    }
+                    .onEnded { v in
+                        defer {
+                            drag = .zero
+                            dragging = false
+                            edit.centerGuide = false
+                            edit.showGrid = false
+                            edit.overTrash = false
+                        }
+                        if edit.trashFrame.contains(v.location) {
+                            withAnimation(.snappy) { store.config.items.removeAll { $0.id == item.id } }
+                            edit.selected = nil
+                            return
+                        }
+                        let cx = clamp(item.x * screen.width + drag.width, size.width / 2, screen.width - size.width / 2)
+                        let cy = clamp(item.y * screen.height + drag.height, size.height / 2, screen.height - size.height / 2)
+                        guard let i = store.config.items.firstIndex(where: { $0.id == item.id }) else { return }
+                        var moved = store.config.items.remove(at: i)
+                        moved.x = Double(cx / screen.width)
+                        moved.y = Double(cy / screen.height)
+                        store.config.items.append(moved) // dragged card comes to the front
+                    }
+            )
+            // Controls go after the card's hit shape and gestures: the toolbar sits outside the
+            // card's bounds, and the card's drag must not swallow clicks on its buttons.
             .overlay(alignment: .top) {
                 if selected && !dragging {
                     CardToolbar(item: item, edit: edit, screen: screen)
@@ -152,48 +230,9 @@ private struct DraggableCard: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 12).padding(.vertical, 6)
                         .background(.black.opacity(0.6), in: Capsule())
+                        .allowsHitTesting(false)
                 }
             }
-            .scaleEffect(dragging ? 1.03 : 1)
-            .shadow(color: .black.opacity(dragging ? 0.4 : 0), radius: 18, y: 8)
-            .opacity(dragging && edit.overTrash ? 0.45 : 1)
-            .contentShape(Rectangle())
-            .onHover { hover = $0 }
-            .onTapGesture { edit.selected = item.id }
-            .gesture(
-                DragGesture(minimumDistance: 2, coordinateSpace: .named("studio"))
-                    .onChanged { v in
-                        dragging = true
-                        edit.selected = item.id
-                        var t = v.translation
-                        // Snap to the horizontal center of the screen.
-                        let cx = item.x * screen.width + t.width
-                        edit.centerGuide = abs(cx - screen.width / 2) < 8
-                        if edit.centerGuide { t.width = screen.width / 2 - item.x * screen.width }
-                        drag = t
-                        edit.overTrash = edit.trashFrame.contains(v.location)
-                    }
-                    .onEnded { v in
-                        defer {
-                            drag = .zero
-                            dragging = false
-                            edit.centerGuide = false
-                            edit.overTrash = false
-                        }
-                        if edit.trashFrame.contains(v.location) {
-                            withAnimation(.snappy) { store.config.items.removeAll { $0.id == item.id } }
-                            edit.selected = nil
-                            return
-                        }
-                        let cx = clamp(item.x * screen.width + drag.width, size.width / 2, screen.width - size.width / 2)
-                        let cy = clamp(item.y * screen.height + drag.height, size.height / 2, screen.height - size.height / 2)
-                        guard let i = store.config.items.firstIndex(where: { $0.id == item.id }) else { return }
-                        var moved = store.config.items.remove(at: i)
-                        moved.x = Double((cx / 4).rounded() * 4 / screen.width)
-                        moved.y = Double((cy / 4).rounded() * 4 / screen.height)
-                        store.config.items.append(moved) // dragged card comes to the front
-                    }
-            )
             .position(x: item.x * screen.width + drag.width, y: item.y * screen.height + drag.height)
     }
 
@@ -231,18 +270,25 @@ private struct ResizeHandle: View {
                             distance(m.size($0), target) < distance(m.size($1), target)
                         } ?? item.size
                         edit.resizing = best
+                        edit.showGrid = store.config.snapToGrid
                         guard best != item.size,
                               let i = store.config.items.firstIndex(where: { $0.id == item.id }) else { return }
                         let ns = m.size(best)
+                        var center = CGPoint(x: start.topLeft.x + ns.width / 2, y: start.topLeft.y + ns.height / 2)
+                        if store.config.snapToGrid {
+                            // Keeps the grown card inside the grid when it would spill past an edge.
+                            center = LayoutGrid(m: m, screen: screen).snap(center: center, size: best)
+                        }
                         withAnimation(.snappy(duration: 0.2)) {
                             store.config.items[i].size = best
-                            store.config.items[i].x = Double((start.topLeft.x + ns.width / 2) / screen.width)
-                            store.config.items[i].y = Double((start.topLeft.y + ns.height / 2) / screen.height)
+                            store.config.items[i].x = Double(center.x / screen.width)
+                            store.config.items[i].y = Double(center.y / screen.height)
                         }
                     }
                     .onEnded { _ in
                         start = nil
                         edit.resizing = nil
+                        edit.showGrid = false
                     }
             )
     }
@@ -344,8 +390,24 @@ private struct StudioBar: View {
 
                 Divider().frame(height: 28)
 
+                Toggle(isOn: $store.config.snapToGrid) {
+                    Label("Griglia", systemImage: "squareshape.split.3x3")
+                }
+                .toggleStyle(.button)
+                .help("Con la griglia i widget scattano di casella in casella e restano allineati. Tieni premuto ⌥ per spostarli liberamente")
+
                 Button {
-                    withAnimation(.snappy) { store.config.arrangeInRows(screen: screen) }
+                    withAnimation(.snappy) { store.config.snapAll(screen: screen) }
+                } label: {
+                    Label("Allinea", systemImage: "align.horizontal.center")
+                }
+                .help("Sposta ogni widget sulla casella più vicina della griglia")
+
+                Button {
+                    withAnimation(.snappy) {
+                        store.config.arrangeInRows(screen: screen)
+                        if store.config.snapToGrid { store.config.snapAll(screen: screen) }
+                    }
                 } label: {
                     Label("In righe", systemImage: "square.grid.2x2")
                 }
@@ -365,7 +427,7 @@ private struct StudioBar: View {
             .padding(12)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
 
-            Text("Trascina i widget dove vuoi · tira l'angolo per cambiare dimensione · clic per le opzioni · sul cestino per toglierli · Esc per chiudere")
+            Text("Trascina i widget sulla griglia (⌥ per muoverli liberamente) · tira l'angolo per cambiare dimensione · clic per le opzioni · sul cestino per toglierli · Esc per chiudere")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.6))
         }
@@ -449,11 +511,34 @@ private struct SizeGallery: View {
     private func add(_ size: WidgetSize) {
         withAnimation(.snappy) {
             if store.add(kind, size: size) {
+                snapNewest(store, screen)
                 edit.selected = store.config.items.last?.id
                 edit.gallery = nil
             } else {
                 edit.flash(fullMessage)
             }
+        }
+    }
+}
+
+/// Faint outline of every grid cell, shown while a card moves.
+private struct GridOverlay: View {
+    let grid: LayoutGrid
+
+    var body: some View {
+        Canvas { g, _ in
+            for col in 0..<grid.columns {
+                for row in 0..<grid.rows {
+                    let cell = Path(roundedRect: grid.cell(col, row), cornerRadius: grid.m.radius * 0.6, style: .continuous)
+                    g.fill(cell, with: .color(.white.opacity(0.06)))
+                    g.stroke(cell, with: .color(.white.opacity(0.22)), lineWidth: 1)
+                }
+            }
+            // The center line: groups placed across it come out symmetric.
+            var mid = Path()
+            mid.move(to: CGPoint(x: grid.screen.width / 2, y: grid.origin.y))
+            mid.addLine(to: CGPoint(x: grid.screen.width / 2, y: grid.origin.y + CGFloat(grid.rows) * grid.pitch - grid.m.gap))
+            g.stroke(mid, with: .color(.yellow.opacity(0.5)), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
         }
     }
 }

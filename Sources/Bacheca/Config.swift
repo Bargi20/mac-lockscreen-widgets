@@ -208,6 +208,8 @@ struct Config: Codable {
     var style: CardStyle = .glass
     var accent: RGBA = .defaultAccent
     var fontStyle: FontStyle = .rounded
+    /// Widgets snap to a centered grid in the studio, like iPhone home screen icons.
+    var snapToGrid = true
     var weatherCity: String = "Milano"
     var latitude: Double = 45.4643
     var longitude: Double = 9.1895
@@ -249,6 +251,7 @@ extension Config {
         style = try c.decodeIfPresent(CardStyle.self, forKey: .style) ?? style
         accent = try c.decodeIfPresent(RGBA.self, forKey: .accent) ?? accent
         fontStyle = try c.decodeIfPresent(FontStyle.self, forKey: .fontStyle) ?? fontStyle
+        snapToGrid = try c.decodeIfPresent(Bool.self, forKey: .snapToGrid) ?? snapToGrid
         weatherCity = try c.decodeIfPresent(String.self, forKey: .weatherCity) ?? weatherCity
         latitude = try c.decodeIfPresent(Double.self, forKey: .latitude) ?? latitude
         longitude = try c.decodeIfPresent(Double.self, forKey: .longitude) ?? longitude
@@ -281,6 +284,53 @@ extension Config {
             }
             top += height + m.gap
         }
+    }
+}
+
+extension Config {
+    /// Moves every widget to the nearest grid cell.
+    mutating func snapAll(screen: CGSize) {
+        let grid = LayoutGrid(m: Metrics(s: scale), screen: screen)
+        for i in items.indices {
+            let p = grid.snap(center: CGPoint(x: items[i].x * screen.width, y: items[i].y * screen.height), size: items[i].size)
+            items[i].x = Double(p.x / screen.width)
+            items[i].y = Double(p.y / screen.height)
+        }
+    }
+}
+
+/// Grid of widget-sized cells, centered on the screen with an even number of columns,
+/// so any group of medium, large or extra-large widgets can sit exactly in the middle.
+struct LayoutGrid {
+    let m: Metrics
+    let screen: CGSize
+    private let margin: CGFloat = 24
+
+    var pitch: CGFloat { m.unit + m.gap }
+
+    var columns: Int {
+        var k = Int((screen.width - 2 * margin + m.gap) / pitch)
+        if k % 2 == 1 { k -= 1 }
+        return max(4, k)
+    }
+
+    var rows: Int { max(2, Int((screen.height - 2 * margin + m.gap) / pitch)) }
+
+    var origin: CGPoint {
+        CGPoint(x: (screen.width - (CGFloat(columns) * pitch - m.gap)) / 2,
+                y: (screen.height - (CGFloat(rows) * pitch - m.gap)) / 2)
+    }
+
+    func cell(_ col: Int, _ row: Int) -> CGRect {
+        CGRect(x: origin.x + CGFloat(col) * pitch, y: origin.y + CGFloat(row) * pitch, width: m.unit, height: m.unit)
+    }
+
+    /// Center of the card whose top-left corner sits on the cell nearest to it.
+    func snap(center: CGPoint, size: WidgetSize) -> CGPoint {
+        let s = m.size(size)
+        let col = min(max(((center.x - s.width / 2 - origin.x) / pitch).rounded(), 0), CGFloat(max(0, columns - size.cols)))
+        let row = min(max(((center.y - s.height / 2 - origin.y) / pitch).rounded(), 0), CGFloat(max(0, rows - size.rows)))
+        return CGPoint(x: origin.x + col * pitch + s.width / 2, y: origin.y + row * pitch + s.height / 2)
     }
 }
 
