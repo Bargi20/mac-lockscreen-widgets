@@ -195,11 +195,12 @@ enum Retro: String, CaseIterable, Identifiable {
 }
 
 enum CardStyle: String, Codable, CaseIterable, Identifiable {
-    case glass, tinted, dark, light, solid, outline, bare
+    case glass, clearGlass, tinted, dark, light, solid, outline, bare
     var id: String { rawValue }
     var title: String {
         switch self {
         case .glass: tr("Vetro", "Glass")
+        case .clearGlass: tr("Vetro trasparente", "Clear glass")
         case .tinted: tr("Vetro colorato", "Tinted glass")
         case .dark: tr("Scuro", "Dark")
         case .light: tr("Chiaro", "Light")
@@ -209,6 +210,8 @@ enum CardStyle: String, Codable, CaseIterable, Identifiable {
         }
     }
     var usesAccent: Bool { self == .tinted || self == .solid || self == .outline }
+    /// Styles drawn with Liquid Glass on macOS 26 and later.
+    var isGlass: Bool { self == .glass || self == .clearGlass || self == .tinted }
 }
 
 enum FontStyle: String, Codable, CaseIterable, Identifiable {
@@ -252,7 +255,7 @@ struct RGBA: Codable, Hashable {
 struct Config: Codable {
     var items: [WidgetItem] = Config.starterLayout
     var scale: Double = 1.0
-    var style: CardStyle = .glass
+    var style: CardStyle = .clearGlass
     var accent: RGBA = .defaultAccent
     var fontStyle: FontStyle = .standard
     /// Widgets snap to a centered grid in the studio, like iPhone home screen icons.
@@ -379,6 +382,14 @@ struct LayoutGrid {
         let row = min(max(((center.y - s.height / 2 - origin.y) / pitch).rounded(), 0), CGFloat(max(0, rows - size.rows)))
         return CGPoint(x: origin.x + col * pitch + s.width / 2, y: origin.y + row * pitch + s.height / 2)
     }
+}
+
+/// Liquid Glass (`glassEffect`) exists from macOS 26; earlier systems get blur materials.
+enum LiquidGlass {
+    static let available: Bool = {
+        if #available(macOS 26.0, *) { return true }
+        return false
+    }()
 }
 
 /// Card geometry shared by the lock screen, the studio and auto layout.

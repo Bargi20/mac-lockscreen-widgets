@@ -370,7 +370,7 @@ private struct CardToolbar: View {
             .help(tr("Rimuovi", "Remove"))
         }
         .padding(.horizontal, 12).padding(.vertical, 7)
-        .background(.ultraThinMaterial, in: Capsule())
+        .glassSurface(Capsule())
         .environment(\.colorScheme, .dark)
         .foregroundStyle(.white)
     }
@@ -412,6 +412,18 @@ func chooseImage(startingAt path: String?) -> String? {
     panel.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
     if let path, !path.isEmpty { panel.directoryURL = URL(fileURLWithPath: path).deletingLastPathComponent() }
     return panel.runModal() == .OK ? panel.url?.path : nil
+}
+
+extension View {
+    /// Liquid Glass surface on macOS 26 and later, a blur material before.
+    @ViewBuilder
+    func glassSurface<S: Shape>(_ shape: S) -> some View {
+        if #available(macOS 26.0, *) {
+            glassEffect(.regular, in: shape)
+        } else {
+            background(.ultraThinMaterial, in: shape)
+        }
+    }
 }
 
 // MARK: - Bottom bar: palette, arrange, trash
@@ -472,16 +484,17 @@ private struct StudioBar: View {
                 Image(systemName: edit.overTrash ? "trash.fill" : "trash")
                     .font(.system(size: 17, weight: .semibold))
                     .frame(width: 42, height: 42)
-                    .background(edit.overTrash ? Color.red.opacity(0.75) : Color.white.opacity(0.12), in: Circle())
+                    .background(edit.overTrash ? SystemColor.red.opacity(0.8) : Color.white.opacity(0.12), in: Circle())
                     .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named("studio")) }) { edit.trashFrame = $0.insetBy(dx: -12, dy: -12) }
                     .help(tr("Trascina qui un widget per toglierlo", "Drag a widget here to remove it"))
 
+                // A solid button in the system accent color: on the glass bar a glass button would wash out.
                 Button(tr("Fine", "Done"), action: onClose)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
             }
             .padding(12)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .glassSurface(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
             Text(tr("Trascina i widget sulla griglia (⌥ per muoverli liberamente) · tira l'angolo per cambiare dimensione · clic per le opzioni · sul cestino per toglierli · Esc per chiudere", "Drag widgets on the grid (⌥ to move freely) · pull the corner to resize · click for options · drop on the trash to remove · Esc to close"))
                 .font(.caption)
@@ -561,7 +574,7 @@ private struct SizeGallery: View {
         }
         .padding(18)
         .fixedSize()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .glassSurface(RoundedRectangle(cornerRadius: 26, style: .continuous))
     }
 
     private func add(_ size: WidgetSize) {

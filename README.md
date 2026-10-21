@@ -55,7 +55,7 @@ Up to 16 widgets. Each widget (except notes and photos) has its own **back**: th
 
 Weather cards take on the sky of the current conditions (clear, cloudy, rain, snow, night); battery and day rings are colored.
 
-Card styles: Glass, Tinted glass, Dark, Light, Solid, Outline, No background. Color, overall size and font (Standard, Rounded, Serif, Mono) are in Settings.
+Card styles: Clear glass (default) and Glass use Liquid Glass on macOS 26 and later (blur materials on earlier systems), plus Tinted glass, Dark, Light, Solid, Outline and No background. Color, overall size and font (Standard, Rounded, Serif, Mono) are in Settings. With Reduce Transparency on, glass cards turn solid.
 
 `open build/Bacheca.app --args --preview` opens the studio straight away, handy while developing (`--gallery` and `--grid` also open the size gallery and show the grid; `--demo` uses a neutral gradient instead of your wallpaper, as in the screenshots above).
 

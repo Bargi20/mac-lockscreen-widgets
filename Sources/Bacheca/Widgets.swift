@@ -126,7 +126,7 @@ struct WidgetCard: View {
     /// Weather cards take on the sky of the current conditions, except in styles with their own color.
     private func sky(_ c: Config) -> [Color]? {
         guard item.kind == .weather, !item.bare, item.backdrop == .style, let w = weather.now,
-              [.glass, .tinted, .dark].contains(c.style) else { return nil }
+              [.glass, .clearGlass, .tinted, .dark].contains(c.style) else { return nil }
         return w.sky
     }
 }
@@ -181,6 +181,11 @@ private struct CardChrome: ViewModifier {
                 }
                 .clipShape(shape)
                 .modifier(MacEdge(shape: shape))
+        } else if LiquidGlass.available && style.isGlass {
+            // Liquid Glass draws its own edge highlight, depth and adaptive contrast: nothing on top.
+            content
+                .clipShape(shape)
+                .modifier(CardBackground(style: style, accent: accent, shape: shape, tint: sky?.first))
         } else {
             content
                 .background {
@@ -189,7 +194,7 @@ private struct CardChrome: ViewModifier {
                     }
                 }
                 .clipShape(shape)
-                .modifier(CardBackground(style: style, accent: accent, shape: shape))
+                .modifier(CardBackground(style: style, accent: accent, shape: shape, tint: nil))
                 .modifier(MacEdge(shape: shape))
         }
     }
@@ -199,35 +204,39 @@ private struct CardBackground: ViewModifier {
     let style: CardStyle
     let accent: Color
     let shape: RoundedRectangle
+    /// Color the glass takes on (the weather sky); the tinted style uses the accent instead.
+    let tint: Color?
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func body(content: Content) -> some View {
-        if reduceTransparency && (style == .glass || style == .tinted) {
-            content.background(style == .tinted ? accent.opacity(0.85) : Color(white: 0.17), in: shape)
+        if reduceTransparency && style.isGlass {
+            content.background(style == .tinted ? accent.opacity(0.85) : (tint ?? Color(white: 0.17)), in: shape)
         } else {
             styled(content)
         }
     }
 
+    @available(macOS 26.0, *)
+    private var glass: Glass {
+        let base: Glass = style == .clearGlass ? .clear : .regular
+        if let color = style == .tinted ? accent : tint { return base.tint(color.opacity(0.6)) }
+        return base
+    }
+
     @ViewBuilder
     private func styled(_ content: Content) -> some View {
         switch style {
-        case .glass:
-            // A light dark wash under the glass keeps white text legible on bright wallpapers.
+        case .glass, .clearGlass, .tinted:
             if #available(macOS 26.0, *) {
+                // Clear glass is barely there, so a light dimming keeps white text readable, as Apple advises.
                 content
-                    .background(Color.black.opacity(0.1), in: shape)
-                    .glassEffect(.regular, in: shape)
+                    .background(style == .clearGlass ? Color.black.opacity(0.18) : Color.clear, in: shape)
+                    .glassEffect(glass, in: shape)
             } else {
                 content
-                    .background(Color.black.opacity(0.1), in: shape)
+                    .background(style == .tinted ? accent.opacity(0.5) : Color.black.opacity(style == .clearGlass ? 0.18 : 0.1), in: shape)
                     .background(.ultraThinMaterial, in: shape)
             }
-        case .tinted:
-            // A glass tint alone barely shows over the lock screen, so the color sits under a thin material.
-            content
-                .background(accent.opacity(0.5), in: shape)
-                .background(.ultraThinMaterial, in: shape)
         case .dark:
             content.background(Color.black.opacity(0.45), in: shape)
         case .light:
