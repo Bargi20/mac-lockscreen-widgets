@@ -848,7 +848,7 @@ private struct CountdownWidget: View {
         switch size {
         case .small:
             VStack(spacing: 2 * s) {
-                Text("\(abs(days))").font(.system(size: 30 * s, weight: .bold))
+                Text("\(abs(days))").font(.system(size: 30 * s, weight: .bold)).lineLimit(1).minimumScaleFactor(0.5)
                 Text(unit).font(.system(size: 9.5 * s, weight: .semibold)).foregroundStyle(.secondary)
                 Text(label).font(.system(size: 10 * s, weight: .semibold)).lineLimit(1).opacity(0.85)
             }
@@ -857,24 +857,30 @@ private struct CountdownWidget: View {
             VStack(spacing: 4 * s) {
                 Image(systemName: "flag.checkered").font(.system(size: 18 * s))
                 Text("\(abs(days))").font(.system(size: 64 * s, weight: .regular)).tracking(-0.02 * 64 * s)
+                    .lineLimit(1).minimumScaleFactor(0.5)
                 Text(unit).font(.system(size: 12 * s, weight: .semibold)).foregroundStyle(.secondary)
                 Text(label).font(.system(size: 15 * s, weight: .semibold)).lineLimit(1)
                 Text(dateText).font(.system(size: 10.5 * s, weight: .medium)).opacity(0.7)
             }
             .padding(12 * s)
         case .medium, .wide:
-            HStack {
+            HStack(spacing: 8 * s) {
                 VStack(alignment: .leading, spacing: 2 * s) {
                     Label(label, systemImage: "flag.checkered")
-                        .font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
+                        .font(.system(size: 11.5 * s, weight: .semibold)).foregroundStyle(.secondary)
+                        .lineLimit(1).minimumScaleFactor(0.7)
                     Spacer(minLength: 0)
                     Text(dateText).font(.system(size: 11 * s, weight: .semibold)).opacity(0.8)
+                        .lineLimit(2).minimumScaleFactor(0.7)
                 }
                 Spacer(minLength: 0)
+                // The number never gives way: label and date shrink or wrap instead.
                 HStack(alignment: .firstTextBaseline, spacing: 4 * s) {
                     Text("\(abs(days))").font(.system(size: (size == .wide ? 80 : 40) * s, weight: .regular)).tracking(-0.02 * (size == .wide ? 80 : 40) * s)
                     Text(unit).font(.system(size: 12 * s, weight: .semibold)).opacity(0.75)
                 }
+                .fixedSize()
+                .layoutPriority(1)
             }
             .padding(16 * s)
         }

@@ -42,6 +42,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lockActivity: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Development aid: `--render-widget <folder> [kind]` draws a widget in every size to PNG
+        // files, without any window, then quits.
+        let args = CommandLine.arguments
+        if let i = args.firstIndex(of: "--render-widget"), i + 1 < args.count {
+            let kind = i + 2 < args.count ? WidgetKind(rawValue: args[i + 2]) ?? .countdown : .countdown
+            renderWidget(kind, to: URL(fileURLWithPath: args[i + 1]))
+            NSApp.terminate(nil)
+            return
+        }
         env.start()
         setUpStatusItem()
 
@@ -143,6 +152,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         previewWindow?.orderOut(nil)
         previewWindow?.close()
         previewWindow = nil
+    }
+
+    private func renderWidget(_ kind: WidgetKind, to folder: URL) {
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        // The off-screen renderer can't draw Liquid Glass, so render with the Dark style instead.
+        var config = env.store.config
+        if config.style.isGlass { config.style = .dark }
+        let store = ConfigStore(previewing: config)
+        for size in WidgetSize.allCases {
+            let card = WidgetCard(item: WidgetItem(kind: kind, size: size)).environmentObject(store)
+            let view = env.inject(card.padding(20).background(Color(white: 0.25)))
+            let renderer = ImageRenderer(content: view)
+            renderer.scale = 2
+            if let image = renderer.nsImage, let tiff = image.tiffRepresentation,
+               let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                try? png.write(to: folder.appendingPathComponent("\(kind.rawValue)-\(size.rawValue).png"))
+            }
+        }
     }
 
     // MARK: Settings

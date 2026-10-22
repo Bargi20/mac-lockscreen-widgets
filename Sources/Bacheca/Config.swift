@@ -413,7 +413,14 @@ final class ConfigStore: ObservableObject {
     private static let key = "config.v1"
 
     @Published var config: Config {
-        didSet { save() }
+        didSet { if persists { save() } }
+    }
+    private var persists = true
+
+    /// A throwaway copy for rendering previews: changes are never saved.
+    init(previewing config: Config) {
+        self.config = config
+        persists = false
     }
 
     init() {
